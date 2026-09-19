@@ -1,0 +1,26 @@
+pre-commit:
+  parallel: false
+  commands:
+    biome:
+      glob: "*.{js,ts,json}"
+      run: bun x @biomejs/biome check --write --no-errors-on-unmatched {staged_files} && git add {staged_files}
+    sort-package-json:
+      glob: "package.json"
+      run: bun x sort-package-json && git add package.json
+
+commit-msg:
+  commands:
+    commitlint:
+      run: bun x commitlint --edit {1}
+
+pre-push:
+  parallel: false
+  commands:
+    biome-check:
+      run: bun x @biomejs/biome check .
+    sort-package-json-check:
+      run: bun x sort-package-json --check
+    typecheck:
+      run: bun run typecheck
+    test:
+      run: bun test --coverage

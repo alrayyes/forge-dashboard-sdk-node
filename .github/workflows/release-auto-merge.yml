@@ -1,0 +1,25 @@
+name: Auto-merge release PR
+
+on:
+  pull_request:
+    types: [opened, reopened, edited, synchronize, labeled]
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  auto-merge:
+    # Quoted: the colon inside 'autorelease: pending' makes this an
+    # invalid plain YAML scalar in block context otherwise (YAML parses
+    # the file before GitHub Actions ever evaluates the expression) --
+    # confirmed live, this exact unquoted form silently broke every push
+    # to this repo with "workflow file issue" and zero jobs ever running.
+    if: "contains(github.event.pull_request.labels.*.name, 'autorelease: pending')"
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - run: gh pr merge --auto --squash "$PR_URL"
+        env:
+          PR_URL: ${{ github.event.pull_request.html_url }}
+          GH_TOKEN: ${{ secrets.RELEASE_TOKEN }}

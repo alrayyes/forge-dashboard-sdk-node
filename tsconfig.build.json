@@ -1,0 +1,24 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "outDir": "dist",
+    // TypeScript 6 stopped inferring rootDir from `include` -- see
+    // TS5011 ("the common source directory ... rootDir must be
+    // explicitly set") -- so this now has to be spelled out to keep
+    // dist/'s layout matching src/'s.
+    "rootDir": "./src",
+    "declaration": true,
+    "declarationMap": true,
+    "sourceMap": true,
+    // "node", not "bun" -- the published .d.ts must resolve `fetch`,
+    // `Request`, `Response` and `process` consistently for whatever
+    // runtime consumes it, and @types/bun's own dependency on @types/node
+    // (bun-types/index.d.ts references it directly) makes mixing the two
+    // here the source of a real global-type conflict; see retry.ts's
+    // "double cast" comment for the one place the dev-time (bun) config
+    // still hits it.
+    "types": ["node"]
+  },
+  "include": ["src"],
+  "exclude": ["test", "src/**/*.test.ts"]
+}

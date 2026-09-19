@@ -1,0 +1,83 @@
+name: Release
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  release-please:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    outputs:
+      release_created: ${{ steps.release.outputs.release_created }}
+    steps:
+      # A GITHUB_TOKEN-authored PR needs a human approval GitHub itself
+      # injects (rules/releases.md's "RELEASE_TOKEN PAT is not automatically
+      # droppable"), and even with that approved, its squash-merge commit is
+      # GITHUB_TOKEN-authored too -- no workflow fires on it, so this job
+      # never re-runs to cut the actual tag. RELEASE_TOKEN (a real-identity
+      # PAT) sidesteps both. See release-auto-merge.yml for the other half.
+      #
+      # Known-pending: RELEASE_TOKEN isn't set on this repo yet -- same
+      # shape as NPM_TOKEN/CODECOV_TOKEN below. This job stays red until
+      # it's added.
+      - id: release
+        uses: googleapis/release-please-action@45996ed1f6d02564a971a2fa1b5860e934307cf7 # v5.0.0
+        with:
+          release-type: node
+          token: ${{ secrets.RELEASE_TOKEN }}
+
+  publish:
+    needs: release-please
+    if: ${{ needs.release-please.outputs.release_created }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      id-token: write # npm provenance (OIDC), no long-lived signing key
+      packages: write # GitHub Packages publish below
+      attestations: write # build provenance attestation below
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
+        with:
+          bun-version: "1.3.14"
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: "22"
+          registry-url: "https://registry.npmjs.org"
+      - run: bun install --frozen-lockfile
+      - run: bun run build
+      # Known-pending: NPM_TOKEN isn't set yet, same shape as
+      # RELEASE_TOKEN/CODECOV_TOKEN -- expected to be red until an npm
+      # automation token is added as a repo secret; wired up now so
+      # publishing just works once it is.
+      - run: npm publish --provenance --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      # Additive to the npmjs.org publish above, not a replacement
+      # (rules/releases.md's "Publish to GitHub Packages, never
+      # git.higherlearning.eu's") -- for a consumer already authenticated
+      # to GitHub who'd rather not hold a separate npmjs.com credential.
+      # GitHub Packages' npm registry requires the package name scoped to
+      # the repo owner, unlike the unscoped public copy, so this is a
+      # dual-name publish: rewrite the name for this one step only, never
+      # committed.
+      - name: Scope package name for GitHub Packages
+        run: npm pkg set name=@alrayyes/forge-dashboard-sdk-node
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: "22"
+          registry-url: "https://npm.pkg.github.com"
+      - run: npm publish
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Attest build provenance
+        uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
+        with:
+          subject-path: dist/**

@@ -1,0 +1,112 @@
+name: Regenerate from spec
+
+on:
+  schedule:
+    - cron: "0 6 * * 1" # weekly, Monday 06:00 UTC, catch-all fallback
+  workflow_dispatch: {}
+  # forge-dashboard's own CI fires this same-day whenever api/openapi.yaml
+  # changes on a merge to its main -- the weekly cron above is only the
+  # fallback for a dispatch that never arrives (a missed webhook delivery,
+  # this repo not existing yet at the time a spec change landed, ...).
+  repository_dispatch:
+    types: [openapi-spec-updated]
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  regenerate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
+        with:
+          bun-version: "1.3.14"
+      - run: bun install --frozen-lockfile
+      - name: Preserve the spec before regenerating
+        run: cp openapi/openapi.yaml /tmp/openapi-before.yaml
+      - name: Bump the pinned spec commit to forge-dashboard's current main
+        run: |
+          gh api repos/alrayyes/forge-dashboard/commits/main --jq '.sha' \
+            > openapi/SPEC_COMMIT
+        env:
+          GH_TOKEN: ${{ github.token }}
+      - name: Fetch the spec at that commit
+        run: ./hack/fetch-spec.sh
+      - name: Regenerate the types
+        run: bun run generate
+      - name: Install oasdiff
+        run: |
+          curl -fsSL -o /tmp/oasdiff.tar.gz \
+            https://github.com/oasdiff/oasdiff/releases/download/v1.32.1/oasdiff_1.32.1_linux_amd64.tar.gz
+          echo "7c8939fc49b75ee11fec66a5b83b37a2fca6aee109fed85013b1ba2ac2a1ee7f  /tmp/oasdiff.tar.gz" | sha256sum -c -
+          tar -xzf /tmp/oasdiff.tar.gz -C /usr/local/bin oasdiff
+          chmod +x /usr/local/bin/oasdiff
+      - name: Classify the spec change and build the commit message
+        id: classify
+        # rules/sdk-generation.md's "Versioning tracks the contract, not
+        # the commits": the bump this PR needs comes from diffing the
+        # spec itself, never from guessing off the generated-code diff
+        # (which can touch every file for a purely additive change).
+        # oasdiff's own breaking-change ruleset -- a required field
+        # removed, a path dropped without deprecation, and the like --
+        # already knows what's actually breaking; a hand-rolled heuristic
+        # would just be a worse copy of it.
+        run: |
+          set +e
+          oasdiff breaking /tmp/openapi-before.yaml openapi/openapi.yaml \
+            --fail-on ERR > /tmp/oasdiff-breaking.txt 2>&1
+          breaking=$?
+          set -e
+          diff_json=$(oasdiff diff /tmp/openapi-before.yaml openapi/openapi.yaml -f json)
+
+          {
+            echo "message<<COMMIT_MSG_EOF"
+            if [ "$breaking" -ne 0 ]; then
+              echo "feat(spec)!: regenerate types from forge-dashboard openapi.yaml"
+              echo
+              echo "BREAKING CHANGE: forge-dashboard's spec removed or"
+              echo "narrowed something a client may depend on:"
+              echo
+              cat /tmp/oasdiff-breaking.txt
+            elif [ -n "$diff_json" ]; then
+              echo "feat(spec): regenerate types from forge-dashboard openapi.yaml"
+            else
+              echo "fix(spec): regenerate types from forge-dashboard openapi.yaml"
+            fi
+            echo "COMMIT_MSG_EOF"
+          } >> "$GITHUB_OUTPUT"
+      - name: Open a pull request if anything changed
+        # A regenerated SDK can touch every file in the repo -- real review,
+        # not the Renovate/Dependabot self-merge exception
+        # (rules/sdk-generation.md's "Regeneration in CI"). token is
+        # RELEASE_TOKEN, not GITHUB_TOKEN: a GITHUB_TOKEN-authored PR needs a
+        # human approval GitHub itself injects, and its own checks can come
+        # back completely empty rather than just failing
+        # (rules/releases.md's hush-hush-* codegen precedent).
+        #
+        # Known-pending: RELEASE_TOKEN isn't set on this repo yet. This step
+        # fails until it's added -- expected, not a bug to work around.
+        #
+        # This PR is always a single commit, and the repo's squash-merge
+        # settings are squash_merge_commit_title: COMMIT_OR_PR_TITLE +
+        # squash_merge_commit_message: COMMIT_MESSAGES, so a single-commit
+        # PR's squash commit reuses that commit's own subject and body --
+        # the classify step's conventional-commit type and BREAKING CHANGE
+        # footer land on main exactly as written here, no PR-title
+        # bookkeeping required on top.
+        uses: peter-evans/create-pull-request@5f6978faf089d4d20b00c7766989d076bb2fc7f1 # v8.1.1
+        with:
+          token: ${{ secrets.RELEASE_TOKEN }}
+          commit-message: ${{ steps.classify.outputs.message }}
+          title: "chore(spec): regenerate types from forge-dashboard openapi.yaml"
+          body: >-
+            Automated regeneration against forge-dashboard's current
+            `api/openapi.yaml`. oasdiff classified this change and the
+            commit above carries the resulting Conventional Commits type --
+            rules/sdk-generation.md's "Versioning tracks the contract, not
+            the commits".
+          branch: chore/regenerate-spec
+          labels: dependencies

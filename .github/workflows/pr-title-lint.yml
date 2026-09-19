@@ -1,0 +1,39 @@
+name: PR title lint
+
+on:
+  pull_request_target:
+    types: [opened, reopened, edited, synchronize]
+
+permissions:
+  pull-requests: read
+
+jobs:
+  lint-pr-title:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      # commitlint only ever lints commit objects, never a PR title, and
+      # this repo squash-merges: a human-authored, multi-commit PR's
+      # squash commit takes its subject from the PR title
+      # (squash_merge_commit_title: COMMIT_OR_PR_TITLE), so a badly
+      # titled PR lands exactly that on `main` with nothing having
+      # checked it (rules/commit.md's "PR titles on a squash-merge
+      # repo"). pull_request_target (not pull_request) is required here
+      # specifically because it needs base-repo permissions to run on a
+      # PR opened from a fork.
+      - uses: amannn/action-semantic-pull-request@48f256284bd46cdaab1048c3721360e808335d50 # v6.1.1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          types: |
+            build
+            chore
+            ci
+            docs
+            feat
+            fix
+            perf
+            refactor
+            revert
+            style
+            test

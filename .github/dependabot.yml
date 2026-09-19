@@ -1,0 +1,35 @@
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+    # A bumped dependency ships in the published package, so it earns a
+    # `fix:` release the same as any other bug fix (rules/releases.md's
+    # "Dependency bots" section) -- github-actions below stays `ci:`
+    # since it only changes the pipeline, never the artifact.
+    commit-message:
+      prefix: fix
+    groups:
+      npm-minor-patch:
+        update-types: [minor, patch]
+      npm-major:
+        update-types: [major]
+    ignore:
+      # typescript 7's rewritten compiler API breaks openapi-typescript
+      # outright (TypeError inside its own ts.mjs, not just a type-check
+      # complaint) -- see PR #3's comment. Remove once openapi-typescript
+      # ships TS 7 support, not before.
+      - dependency-name: "typescript"
+        versions: ["7.x"]
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    commit-message:
+      prefix: ci
+    groups:
+      github-actions-minor-patch:
+        update-types: [minor, patch]
+      github-actions-major:
+        update-types: [major]
