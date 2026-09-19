@@ -3,6 +3,7 @@
 [![CI](https://github.com/alrayyes/forge-dashboard-sdk-node/actions/workflows/ci.yml/badge.svg)](https://github.com/alrayyes/forge-dashboard-sdk-node/actions/workflows/ci.yml)
 [![npm](https://img.shields.io/npm/v/forge-dashboard-sdk-node)](https://www.npmjs.com/package/forge-dashboard-sdk-node)
 [![Codecov](https://codecov.io/gh/alrayyes/forge-dashboard-sdk-node/graph/badge.svg)](https://codecov.io/gh/alrayyes/forge-dashboard-sdk-node)
+[![docs](https://img.shields.io/badge/docs-typedoc-blue)](https://alrayyes.github.io/forge-dashboard-sdk-node/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
 A Node/TypeScript client for [forge-dashboard](https://github.com/alrayyes/forge-dashboard)'s
