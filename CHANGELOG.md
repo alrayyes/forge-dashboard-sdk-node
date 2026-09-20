@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.0.1](https://github.com/alrayyes/forge-dashboard-sdk-node/compare/v1.0.0...v1.0.1) (2026-09-20)
+
+
+### Bug Fixes
+
+* **ci:** add a cooldown period to dependabot.yml ([#8](https://github.com/alrayyes/forge-dashboard-sdk-node/issues/8)) ([7d29a15](https://github.com/alrayyes/forge-dashboard-sdk-node/commit/7d29a15da0d8157b1a1592291cc76da7fc53226a))
+
 ## 1.0.0 (2026-09-20)
 
 
