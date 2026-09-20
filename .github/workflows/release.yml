@@ -21,10 +21,6 @@ jobs:
       # GITHUB_TOKEN-authored too -- no workflow fires on it, so this job
       # never re-runs to cut the actual tag. RELEASE_TOKEN (a real-identity
       # PAT) sidesteps both. See release-auto-merge.yml for the other half.
-      #
-      # Known-pending: RELEASE_TOKEN isn't set on this repo yet -- same
-      # shape as NPM_TOKEN/CODECOV_TOKEN below. This job stays red until
-      # it's added.
       - id: release
         uses: googleapis/release-please-action@45996ed1f6d02564a971a2fa1b5860e934307cf7 # v5.0.0
         with:
