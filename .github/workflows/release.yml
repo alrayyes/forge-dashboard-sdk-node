@@ -48,22 +48,23 @@ jobs:
           registry-url: "https://registry.npmjs.org"
       - run: bun install --frozen-lockfile
       - run: bun run build
-      # Known-pending: NPM_TOKEN isn't set yet, same shape as
-      # RELEASE_TOKEN/CODECOV_TOKEN -- expected to be red until an npm
-      # automation token is added as a repo secret; wired up now so
-      # publishing just works once it is.
+      # OIDC trusted publishing (npmjs.com package settings -> Trusted
+      # Publisher -> GitHub Actions, org alrayyes / repo
+      # forge-dashboard-sdk-node / workflow release.yml, no environment).
+      # Needs npm >=11.5.1 -- pin explicitly rather than trust whatever
+      # setup-node's Node 22 bundles. No NODE_AUTH_TOKEN / NPM_TOKEN: the
+      # id-token: write permission above is the auth.
+      - run: npm install -g npm@12.0.2
       - run: npm publish --provenance --access public
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
       # Additive to the npmjs.org publish above, not a replacement
       # (rules/releases.md's "Publish to GitHub Packages, never
       # git.higherlearning.eu's") -- for a consumer already authenticated
       # to GitHub who'd rather not hold a separate npmjs.com credential.
       # GitHub Packages' npm registry requires the package name scoped to
-      # the repo owner, unlike the unscoped public copy, so this is a
-      # dual-name publish: rewrite the name for this one step only, never
-      # committed.
+      # the repo owner, not the forge-dashboard npm org the public copy
+      # is scoped to, so this is a dual-scope publish: rewrite the name for
+      # this one step only, never committed.
       - name: Scope package name for GitHub Packages
         run: npm pkg set name=@alrayyes/forge-dashboard-sdk-node
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
