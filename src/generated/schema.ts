@@ -4,6 +4,31 @@
  */
 
 export interface paths {
+    "/api/auth/registration-status": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Whether self-registration is open
+         * @description Unauthenticated — a visitor deciding whether to show the login
+         *     page's own "Register a new passkey instead" button has no session
+         *     yet by definition. `open` is true only on a fresh instance with
+         *     zero registered users; once any account exists, self-registration
+         *     is closed and every registration after that requires a valid
+         *     `inviteToken` (see POST /api/auth/register/begin).
+         */
+        get: operations["getRegistrationStatus"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/auth/register/begin": {
         parameters: {
             query?: never;
@@ -13,7 +38,16 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Start a passkey registration ceremony */
+        /**
+         * Start a passkey registration ceremony
+         * @description The very first registration on a fresh instance (zero registered
+         *     users — see GET /api/auth/registration-status) needs no
+         *     `inviteToken` and bootstraps that account as admin. Every
+         *     registration after that requires a valid, unexpired, unconsumed
+         *     `inviteToken` issued by an admin (POST /api/admin/invites) for
+         *     exactly this `username` — the invite's own `displayName` is what's
+         *     actually used, not this request's.
+         */
         post: operations["beginRegistration"];
         delete?: never;
         options?: never;
@@ -402,13 +436,16 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * Hide one tracked repo's pull requests and issues from the dashboard and Insights
+         * Hide one tracked repo's pull requests, issues, or both from the dashboard and Insights
          * @description Reversible, not destructive (#363): the repo itself keeps
          *     appearing in GET /api/dashboard's `repos` array with accurate
          *     webhook-coverage status, and keeps being fetched and counted —
-         *     only its pullRequests/issues entries stop appearing there and on
-         *     Insights. Idempotent: ignoring an already-ignored repo is a
-         *     no-op, not an error.
+         *     only the pullRequests and/or issues entries the request scopes
+         *     (#511) stop appearing there and on Insights. A repeat call
+         *     replaces the previously saved scope rather than merging with it
+         *     (ignoring PRs only, then issues only, ends with only issues
+         *     ignored) — idempotent for an identical repeat, not additive
+         *     across different scopes.
          */
         post: operations["ignoreRepo"];
         delete?: never;
@@ -504,6 +541,28 @@ export interface paths {
          *     picking one is out of scope for this endpoint.
          */
         post: operations["mergePullRequest"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/pull-requests/close": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Close one pull request without merging it, on the signed-in user's behalf
+         * @description Closes the named pull request — for one that turns out not to
+         *     need merging at all (a duplicate, or one whose content already
+         *     landed another way), not a substitute for Merge.
+         */
+        post: operations["closePullRequest"];
         delete?: never;
         options?: never;
         head?: never;
@@ -678,6 +737,58 @@ export interface paths {
          *     becomes available for a fresh registration.
          */
         delete: operations["deleteUser"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/admin/invites": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List outstanding registration invites
+         * @description Every invite that's neither consumed nor expired — never the raw
+         *     token, only its own stable id (see AdminInvite).
+         */
+        get: operations["listInvites"];
+        put?: never;
+        /**
+         * Generate a new single-use registration invite
+         * @description The admin picks the username and display name up front — the
+         *     invitee only completes the WebAuthn ceremony at the link this
+         *     returns (`/login?invite=<token>`, built client-side). Valid for
+         *     one hour, fixed.
+         */
+        post: operations["createInvite"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/admin/invites/{token}/revoke": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Revoke an outstanding invite
+         * @description Stops the invite's token from ever completing a registration.
+         *     `token` here is an invite's own `id` (from AdminInvite's own
+         *     listing), never the raw secret an invitee would use to register —
+         *     that's AdminInviteCreateResponse's own `token` field, and it's
+         *     never listed again after creation.
+         */
+        post: operations["revokeInvite"];
+        delete?: never;
         options?: never;
         head?: never;
         patch?: never;
@@ -943,8 +1054,25 @@ export interface components {
         RegisterBeginRequest: {
             /** @example ryan */
             username: string;
-            /** @example Ryan */
+            /**
+             * @description Ignored once an invite is required (any account already
+             *     exists) — the invite's own displayName (set by the admin who
+             *     issued it) is what's actually used. Only the very first,
+             *     bootstrap registration on a fresh instance takes this value.
+             * @example Ryan
+             */
             displayName: string;
+            /**
+             * @description Required once any account already exists (see GET
+             *     /api/auth/registration-status) — a single-use token from POST
+             *     /api/admin/invites, issued for exactly this username. Omitted
+             *     or ignored for the very first, bootstrap registration.
+             */
+            inviteToken?: string;
+        };
+        RegistrationStatus: {
+            /** @description True only when the instance has zero registered users. */
+            open: boolean;
         };
         LoginBeginRequest: {
             /** @example ryan */
@@ -986,6 +1114,43 @@ export interface components {
             isAdmin: boolean;
             /** Format: date-time */
             createdAt: string;
+        };
+        /**
+         * @description An outstanding (unconsumed, unexpired) invite's own metadata —
+         *     never the raw token, which only AdminInviteCreateResponse ever
+         *     carries, once, at creation time.
+         */
+        AdminInvite: {
+            /**
+             * @description The invite's own stable identifier — pass this back to POST
+             *     /api/admin/invites/{token}/revoke, not the raw token an
+             *     invitee registers with.
+             */
+            id: string;
+            username: string;
+            displayName: string;
+            /** Format: date-time */
+            expiresAt: string;
+        };
+        AdminInviteCreateRequest: {
+            /** @example alex */
+            username: string;
+            /** @example Alex */
+            displayName: string;
+        };
+        /**
+         * @description The one and only response that ever carries the raw invite token
+         *     — shown to the admin once, at creation time, for them to copy
+         *     into a `/login?invite=<token>` link and hand to the invitee out
+         *     of band. Only its hash is stored, so it can't be recovered from
+         *     here again.
+         */
+        AdminInviteCreateResponse: {
+            token: string;
+            username: string;
+            displayName: string;
+            /** Format: date-time */
+            expiresAt: string;
         };
         SharedUser: {
             username: string;
@@ -1158,6 +1323,21 @@ export interface components {
             forge: components["schemas"]["Forge"];
             /** @description "owner/repo", matching a Repo.fullName from GET /api/dashboard. */
             fullName: string;
+        };
+        /**
+         * @description Which repo to ignore, and in which scope(s) (#511). At least one
+         *     of prs/issues must be true — a request with both false is
+         *     rejected with 400 rather than silently doing nothing; use POST
+         *     /api/repos/unignore to clear both at once instead.
+         */
+        RepoIgnoreRequest: {
+            forge: components["schemas"]["Forge"];
+            /** @description "owner/repo", matching a Repo.fullName from GET /api/dashboard. */
+            fullName: string;
+            /** @description Whether to ignore this repo's pull requests. */
+            prs: boolean;
+            /** @description Whether to ignore this repo's issues. */
+            issues: boolean;
         };
         /** @description Which pull request to act on. */
         PullRequestActionRequest: {
@@ -1352,12 +1532,24 @@ export interface components {
              */
             url: string;
             /**
-             * @description Whether the signed-in user has ignored this repo (#363) — its
-             *     pullRequests/issues entries are excluded from this same
-             *     response and from Insights, but the repo itself still
-             *     appears here with accurate hasWebhook/canManageWebhooks.
+             * @description Whether the signed-in user has ignored this repo in either
+             *     scope below (#363, #511) — true whenever ignoredPRs or
+             *     ignoredIssues is true. The repo itself still appears here
+             *     with accurate hasWebhook/canManageWebhooks regardless.
              */
             ignored: boolean;
+            /**
+             * @description Whether the signed-in user has ignored this repo's pull
+             *     requests specifically (#511) — its pullRequests entries are
+             *     excluded from this same response and from Insights.
+             */
+            ignoredPRs: boolean;
+            /**
+             * @description Whether the signed-in user has ignored this repo's issues
+             *     specifically (#511) — its issues entries are excluded from
+             *     this same response and from Insights.
+             */
+            ignoredIssues: boolean;
             /**
              * @description Whether this app has ever recorded a signature-verified
              *     webhook delivery for this repo. Passive: it reflects a real
@@ -1404,6 +1596,26 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
+    getRegistrationStatus: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The current registration status. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RegistrationStatus"];
+                };
+            };
+        };
+    };
     beginRegistration: {
         parameters: {
             query?: never;
@@ -1427,6 +1639,19 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["WebAuthnCeremonyOptions"];
+                };
+            };
+            /**
+             * @description Self-registration is closed (an account already exists) and
+             *     no valid, unexpired, unconsumed invite for this username was
+             *     presented.
+             */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
                 };
             };
             /** @description That username is already registered. */
@@ -2191,18 +2416,21 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["WebhookEnsureRequest"];
+                "application/json": components["schemas"]["RepoIgnoreRequest"];
             };
         };
         responses: {
-            /** @description The repo is now ignored (or already was). */
+            /** @description The repo is now ignored in the requested scope (or already was). */
             204: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content?: never;
             };
-            /** @description The request body wasn't valid JSON, or `fullName` wasn't "owner/repo". */
+            /**
+             * @description The request body wasn't valid JSON, `fullName` wasn't
+             *     "owner/repo", or both `prs` and `issues` were false.
+             */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -2405,6 +2633,87 @@ export interface operations {
             };
             /** @description The forge rejected the merge because the pull request isn't currently mergeable — a real conflict, or its state changed since the dashboard's last refresh. */
             409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description The forge rate-limited the request. */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description The forge was unreachable, or answered with something this app couldn't classify more specifically. */
+            502: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
+    closePullRequest: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PullRequestActionRequest"];
+            };
+        };
+        responses: {
+            /** @description Closed. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /**
+             * @description The request body wasn't valid JSON, `fullName` wasn't
+             *     "owner/repo", no credentials are saved for that forge, or
+             *     that forge's client doesn't support closing pull requests at
+             *     all.
+             */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description No valid session cookie was presented. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description The forge rejected the request as unauthorized — the saved token's scope doesn't cover closing, or it isn't allowed to close on that repo. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description The forge reported the repo or pull request doesn't exist (or isn't visible to this token). */
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -2920,6 +3229,151 @@ export interface operations {
                 };
             };
             /** @description No user is registered under that username. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
+    listInvites: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Every outstanding invite. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminInvite"][];
+                };
+            };
+            /** @description No valid session cookie was presented. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description The signed-in user isn't the designated admin. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
+    createInvite: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AdminInviteCreateRequest"];
+            };
+        };
+        responses: {
+            /** @description Created — the only response that ever carries the raw token. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminInviteCreateResponse"];
+                };
+            };
+            /** @description username or displayName was blank. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description No valid session cookie was presented. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description The signed-in user isn't the designated admin. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description That username is already registered. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
+    revokeInvite: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                token: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Revoked. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description No valid session cookie was presented. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description The signed-in user isn't the designated admin. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description No outstanding invite with that id. */
             404: {
                 headers: {
                     [name: string]: unknown;
