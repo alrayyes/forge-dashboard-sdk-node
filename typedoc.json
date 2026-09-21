@@ -3,7 +3,7 @@
   "entryPoints": ["src/index.ts"],
   "exclude": ["src/generated/**"],
   "out": "site",
-  "name": "forge-dashboard-sdk-node",
+  "name": "@forge-dashboard/sdk-node",
   "readme": "README.md",
   "excludePrivate": true,
   "excludeInternal": true,
