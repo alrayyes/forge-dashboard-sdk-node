@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.1.0](https://github.com/alrayyes/forge-dashboard-sdk-node/compare/v1.0.1...v1.1.0) (2026-09-21)
+
+
+### Features
+
+* scope the npm package to the forge-dashboard org ([#10](https://github.com/alrayyes/forge-dashboard-sdk-node/issues/10)) ([78f0cd2](https://github.com/alrayyes/forge-dashboard-sdk-node/commit/78f0cd24ef184097b3f9b122f7f4b19ca98ecd1c))
+
 ## [1.0.1](https://github.com/alrayyes/forge-dashboard-sdk-node/compare/v1.0.0...v1.0.1) (2026-09-20)
 
 
