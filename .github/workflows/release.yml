@@ -3,6 +3,11 @@ name: Release
 on:
   push:
     branches: [main]
+  # Manual retry for a tag release-please already cut whose publish job
+  # failed (e.g. a registry outage, or a config gap fixed after the fact,
+  # as happened with #6) -- without this there's no way to redo just the
+  # publish half without a new releasable commit to force another tag.
+  workflow_dispatch:
 
 permissions:
   contents: write
@@ -29,7 +34,7 @@ jobs:
 
   publish:
     needs: release-please
-    if: ${{ needs.release-please.outputs.release_created }}
+    if: ${{ needs.release-please.outputs.release_created || github.event_name == 'workflow_dispatch' }}
     runs-on: ubuntu-latest
     timeout-minutes: 10
     permissions:
