@@ -1,5 +1,5 @@
 {
-  "name": "forge-dashboard-sdk-node",
+  "name": "@forge-dashboard/sdk-node",
   "version": "1.0.1",
   "description": "Node/TypeScript client for forge-dashboard's REST API, generated from its OpenAPI spec.",
   "homepage": "https://github.com/alrayyes/forge-dashboard-sdk-node",
@@ -56,5 +56,8 @@
   "packageManager": "bun@1.3.14",
   "engines": {
     "node": ">=20"
+  },
+  "publishConfig": {
+    "access": "public"
   }
 }
