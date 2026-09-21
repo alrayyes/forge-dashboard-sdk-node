@@ -1,0 +1,41 @@
+# regenerate.yml opens a spec-regeneration pull request but never merges
+# it. Ryan granted a durable, account-wide standing exception for this
+# class of PR on 2026-09-21 (rules/sdk-generation.md's "Regeneration in
+# CI" section, alrayyes/dotfiles#629): merge once CI is green, the same
+# way a Renovate/Dependabot/release-please PR already does, whether
+# oasdiff classified the underlying spec change as additive or breaking --
+# oasdiff's own classification (already reflected in the commit's
+# Conventional Commits type) is the judgment call, not a second human read
+# of the generated diff.
+#
+# Gated on the branch name regenerate.yml opens its pull request from and
+# the label it applies, matching the hush-hush-{go,node,python,php} version
+# of this workflow.
+#
+# pull_request, not pull_request_target: regenerate.yml's pull request
+# comes from a branch on this repo, never a fork.
+name: regenerate-auto-merge
+
+on: pull_request
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  auto-merge:
+    if: |
+      github.event.pull_request.head.ref == 'chore/regenerate-spec' &&
+      contains(github.event.pull_request.labels.*.name, 'dependencies')
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      # RELEASE_TOKEN, not the default GITHUB_TOKEN: a GITHUB_TOKEN merge
+      # produces a commit GitHub won't re-trigger workflows on, which
+      # would leave this repo's own release.yml never firing after an
+      # auto-merged regeneration lands on main.
+      - name: Enable auto-merge
+        run: gh pr merge --auto --squash "$PR_URL"
+        env:
+          PR_URL: ${{ github.event.pull_request.html_url }}
+          GH_TOKEN: ${{ secrets.RELEASE_TOKEN }}
