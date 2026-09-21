@@ -12,6 +12,8 @@ REST API, generated from its OpenAPI spec with
 [openapi-fetch](https://openapi-ts.dev/openapi-fetch/). It saves you from
 hand-rolling HTTP requests and retries against the API yourself.
 
+Full API reference: <https://alrayyes.github.io/forge-dashboard-sdk-node/>
+
 ## Requirements
 
 - Node.js 20+ or [Bun](https://bun.sh) 1.1+ — anything with a native `fetch`.
