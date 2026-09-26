@@ -253,32 +253,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/settings/bot-pr-updates": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Whether bot-managed pull request branches can be updated
-         * @description A lightweight, side-effect-free read of one field —
-         *     allowBotPrUpdates — for the dashboard page to check on every
-         *     load. Deliberately not GET /api/settings itself: that handler
-         *     also provisions webhook credentials on first call
-         *     (EnsureWebhookCredentials), which the dashboard visiting on a
-         *     user's behalf shouldn't trigger for someone who's never opened
-         *     Settings at all.
-         */
-        get: operations["getBotPrUpdatesSetting"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/api/settings/theme": {
         parameters: {
             query?: never;
@@ -289,10 +263,11 @@ export interface paths {
         /**
          * The signed-in user's own saved theme preference
          * @description A lightweight, side-effect-free read of one field — theme — for
-         *     every page to check on load (#352). The same "deliberately not
-         *     GET /api/settings itself" restraint GET /api/settings/bot-pr-updates
-         *     already uses, for the same reason: this loads on every page visit
-         *     and shouldn't provision webhook credentials as a side effect.
+         *     every page to check on load (#352). Deliberately not
+         *     GET /api/settings itself: that handler also provisions webhook
+         *     credentials on first call (EnsureWebhookCredentials), which
+         *     every page loading shouldn't trigger for a user who's never
+         *     opened Settings at all.
          */
         get: operations["getTheme"];
         /**
@@ -323,10 +298,9 @@ export interface paths {
         };
         /**
          * The signed-in user's own saved dashboard/Insights filter state
-         * @description A lightweight read of one opaque blob (#353), the same
-         *     "deliberately not GET /api/settings itself" restraint
-         *     GET /api/settings/bot-pr-updates already uses, for the same
-         *     reason: this loads on every dashboard/Insights visit and
+         * @description A lightweight read of one opaque blob (#353), deliberately not
+         *     GET /api/settings itself for the same reason GET /api/settings/theme
+         *     isn't either: this loads on every dashboard/Insights visit and
          *     shouldn't provision webhook credentials as a side effect.
          *     `{}` for a user who's never saved any filters yet, not a 404.
          */
@@ -541,6 +515,34 @@ export interface paths {
          *     picking one is out of scope for this endpoint.
          */
         post: operations["mergePullRequest"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/pull-requests/auto-merge": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Arm a pull request's own native auto-merge, on the signed-in user's behalf
+         * @description GitHub only, today. Enables the named pull request's own
+         *     auto-merge via GitHub's `enablePullRequestAutoMerge` GraphQL
+         *     mutation — REST has no equivalent endpoint. Unlike Merge, that
+         *     mutation asks for an explicit merge method rather than picking
+         *     the repo's own default itself, so this looks the repo's allowed
+         *     methods up first and picks one with the same merge > squash >
+         *     rebase precedence Merge already uses; no override is exposed
+         *     here either. The pull request stays open and unmerged until the
+         *     forge's own required checks pass on their own.
+         */
+        post: operations["enablePullRequestAutoMerge"];
         delete?: never;
         options?: never;
         head?: never;
@@ -788,6 +790,52 @@ export interface paths {
          *     never listed again after creation.
          */
         post: operations["revokeInvite"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/admin/requests": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List every outbound GitHub/Forgejo request this instance has made
+         * @description Every outbound request `internal/github` or `internal/forgejo` has
+         *     made, newest first, across every account — an admin's own
+         *     credential included, since correlating a shared-credential
+         *     problem (like the rate-limit incident that motivated this
+         *     endpoint) needs a cross-account view no single account's own
+         *     session could give.
+         */
+        get: operations["listRequests"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/admin/requests/export": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Export the (filtered) outbound-request log as CSV
+         * @description The same rows GET /api/admin/requests would return for the same
+         *     filter, as a downloadable CSV file with one header row.
+         */
+        get: operations["exportRequests"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -1152,6 +1200,43 @@ export interface components {
             /** Format: date-time */
             expiresAt: string;
         };
+        /**
+         * @description One outbound request `internal/github` or `internal/forgejo`
+         *     made, as persisted by the request_log table.
+         */
+        RequestLogEntry: {
+            /** Format: date-time */
+            loggedAt: string;
+            forge: components["schemas"]["Forge"];
+            /**
+             * @description The display username of the account whose credential made
+             *     this request, or omitted when the request was made with no
+             *     per-account credential, or when that account has since been
+             *     deleted.
+             */
+            account?: string;
+            /**
+             * @example GET
+             * @example POST
+             */
+            method: string;
+            /**
+             * @description The request's own path — GraphQL requests all report "/graphql".
+             * @example /repos/alrayyes/forge-dashboard/pulls
+             * @example /graphql
+             */
+            endpoint: string;
+            /** @description Omitted when the request never got a response at all. */
+            statusCode?: number;
+            /**
+             * @description "success", or the `ForgeErrorKind` the failure was classified as.
+             * @example success
+             * @example rate_limited
+             */
+            outcome: string;
+            /** @description Omitted when the response carried no rate-limit fields. */
+            rateLimit?: components["schemas"]["RateLimit"];
+        };
         SharedUser: {
             username: string;
             displayName: string;
@@ -1194,15 +1279,6 @@ export interface components {
              */
             webhookSecret: string;
             /**
-             * @description Overrides the default restraint the Update branch/Dependabot/
-             *     Renovate action buttons apply to a pull request opened by
-             *     release-please, Dependabot, or Renovate — those tools already
-             *     keep their own PRs current on their own schedule. False (the
-             *     default) leaves bot-managed PRs alone; true treats them the
-             *     same as any other PR.
-             */
-            allowBotPrUpdates: boolean;
-            /**
              * @description The label Renovate's own rebase/retry trigger listens for on
              *     a repo (Renovate's own `rebaseLabel` config option — genuinely
              *     per-repo configurable, so this is a user-set override rather
@@ -1234,12 +1310,7 @@ export interface components {
             forgejoUrl?: string;
             forgejoToken?: string;
             forgejoUsername?: string;
-            allowBotPrUpdates?: boolean;
             renovateRebaseLabel?: string;
-        };
-        /** @description See GET /api/settings/bot-pr-updates's own description. */
-        BotPrUpdatesResponse: {
-            allowBotPrUpdates: boolean;
         };
         /** @description See GET /api/settings/theme's own description. */
         ThemeResponse: {
@@ -1480,6 +1551,16 @@ export interface components {
              */
             behind: boolean;
             /**
+             * @description Whether merging this pull request would produce an empty
+             *     commit — its content already landed on the base branch some
+             *     other way. False whenever this service can't tell (the
+             *     unauthenticated GitHub REST fallback, or a Forgejo instance
+             *     old enough not to report additions/deletions/changed_files on
+             *     its list endpoint), never a false positive: a pull request
+             *     this never confirms empty just renders as it always has.
+             */
+            empty: boolean;
+            /**
              * @description Whether auto-merge is currently scheduled on this pull request.
              *     Omitted when the owning forge has no way to report this at all
              *     (Forgejo, today) — never false in that case, since this service
@@ -1575,11 +1656,13 @@ export interface components {
              * @description Whether the signed-in user has turned on automatic branch
              *     updates for this repo (#365) — any of its pull requests the
              *     background refresh finds behind its base branch gets updated
-             *     the same way a manual "Update branch" click would, without
-             *     one. Suppressed for a bot-managed pull request (release-please,
-             *     Dependabot, Renovate) unless bot-PR updates are separately
-             *     allowed (POST /api/settings/bot-pr-updates), the same
-             *     restraint the manual button already applies.
+             *     the same way a manual "Update branch" click would. A
+             *     Dependabot pull request gets its own rebase comment instead,
+             *     and a Renovate one its own rebase label, mirroring their
+             *     manual action buttons. A release-please pull request is
+             *     always skipped: it regenerates its own branch and changelog
+             *     on every push to the base branch, and has no dedicated
+             *     rebase/label action the way Dependabot and Renovate do.
              */
             autoUpdateBranch: boolean;
         };
@@ -1589,6 +1672,16 @@ export interface components {
         PathUsername: string;
         PathWebhookToken: string;
         PathTokenID: string;
+        /** @description Narrow to entries against this forge only. Omitted matches every forge. */
+        QueryRequestLogForge: components["schemas"]["Forge"];
+        /**
+         * @description Narrow to entries made under this account's own credential only —
+         *     the account's `username` (matching RequestLogEntry.account), not
+         *     its internal id. An unrecognized username matches nothing rather
+         *     than erroring, the same as any other filter with no matches.
+         *     Omitted matches every account.
+         */
+        QueryRequestLogAccount: string;
     };
     requestBodies: never;
     headers: never;
@@ -2042,35 +2135,6 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Error"];
-                };
-            };
-            /** @description No valid session cookie was presented. */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["Error"];
-                };
-            };
-        };
-    };
-    getBotPrUpdatesSetting: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description The current value. */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["BotPrUpdatesResponse"];
                 };
             };
             /** @description No valid session cookie was presented. */
@@ -2650,6 +2714,87 @@ export interface operations {
                 };
             };
             /** @description The forge was unreachable, or answered with something this app couldn't classify more specifically. */
+            502: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
+    enablePullRequestAutoMerge: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PullRequestActionRequest"];
+            };
+        };
+        responses: {
+            /** @description Auto-merge armed. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /**
+             * @description The request body wasn't valid JSON, `fullName` wasn't
+             *     "owner/repo", no credentials are saved for that forge, or
+             *     that forge's client doesn't support enabling auto-merge on
+             *     pull requests at all.
+             */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description No valid session cookie was presented. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description The forge rejected the request as unauthorized — the saved token's scope doesn't cover this, or the repo doesn't allow auto-merge to be armed at all. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description The forge reported the repo or pull request doesn't exist (or isn't visible to this token). */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description The forge rate-limited the request. */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description The forge was unreachable, or answered with something this app couldn't classify more specifically — including the repo rejecting auto-merge for a reason this app has no more specific status for. */
             502: {
                 headers: {
                     [name: string]: unknown;
@@ -3375,6 +3520,104 @@ export interface operations {
             };
             /** @description No outstanding invite with that id. */
             404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
+    listRequests: {
+        parameters: {
+            query?: {
+                /** @description Narrow to entries against this forge only. Omitted matches every forge. */
+                forge?: components["parameters"]["QueryRequestLogForge"];
+                /**
+                 * @description Narrow to entries made under this account's own credential only —
+                 *     the account's `username` (matching RequestLogEntry.account), not
+                 *     its internal id. An unrecognized username matches nothing rather
+                 *     than erroring, the same as any other filter with no matches.
+                 *     Omitted matches every account.
+                 */
+                account?: components["parameters"]["QueryRequestLogAccount"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Every request-log entry matching the filter, newest first. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RequestLogEntry"][];
+                };
+            };
+            /** @description No valid session cookie was presented. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description The signed-in user isn't the designated admin. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
+    exportRequests: {
+        parameters: {
+            query?: {
+                /** @description Narrow to entries against this forge only. Omitted matches every forge. */
+                forge?: components["parameters"]["QueryRequestLogForge"];
+                /**
+                 * @description Narrow to entries made under this account's own credential only —
+                 *     the account's `username` (matching RequestLogEntry.account), not
+                 *     its internal id. An unrecognized username matches nothing rather
+                 *     than erroring, the same as any other filter with no matches.
+                 *     Omitted matches every account.
+                 */
+                account?: components["parameters"]["QueryRequestLogAccount"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description A CSV file, one row per matching entry plus a header row. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/csv": string;
+                };
+            };
+            /** @description No valid session cookie was presented. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description The signed-in user isn't the designated admin. */
+            403: {
                 headers: {
                     [name: string]: unknown;
                 };
