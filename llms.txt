@@ -1,0 +1,22 @@
+# @forge-dashboard/sdk-node
+
+> Node/TypeScript client for forge-dashboard's REST API, generated from its
+> OpenAPI spec with openapi-typescript and openapi-fetch. Every operation is
+> a typed `client.GET(path, ...)` / `client.POST(path, ...)` call returning
+> `{ data, error, response }`, with automatic retry on 429/5xx.
+
+Requires Node.js 20+ or Bun 1.1+, a running forge-dashboard instance, and a
+personal API token for every endpoint except `/healthz` and `/api/version`.
+
+## Docs
+
+- [API reference](https://alrayyes.github.io/forge-dashboard-sdk-node/): full typedoc-generated reference, built from the source's TSDoc comments.
+- [createForgeDashboardClient](https://alrayyes.github.io/forge-dashboard-sdk-node/functions/createForgeDashboardClient.html): builds the typed client, taking the base URL and an optional token/retry/fetch config.
+- [decodeError](https://alrayyes.github.io/forge-dashboard-sdk-node/functions/decodeError.html): turns a failed response into a uniform ApiError.
+- [ApiError](https://alrayyes.github.io/forge-dashboard-sdk-node/classes/ApiError.html): the error type every failed call decodes to.
+- [ClientOptions](https://alrayyes.github.io/forge-dashboard-sdk-node/interfaces/ClientOptions.html): the options object createForgeDashboardClient accepts (token, retry, fetch).
+
+## Source
+
+- [GitHub repository](https://github.com/alrayyes/forge-dashboard-sdk-node): source, issues, and CONTRIBUTING.md for building, testing and the release process.
+- [npm package](https://www.npmjs.com/package/@forge-dashboard/sdk-node): install and version history.
