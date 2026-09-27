@@ -50,6 +50,7 @@
     "@stryker-mutator/typescript-checker": "10.0.0",
     "@types/bun": "1.4.2",
     "@types/node": "26.6.2",
+    "lefthook": "2.1.14",
     "openapi-typescript": "7.13.0",
     "sort-package-json": "4.0.0",
     "typedoc": "0.28.20",
