@@ -29,6 +29,7 @@
     "lint:fix": "biome check --write .",
     "test": "bun test",
     "test:ci": "bun test --coverage --coverage-reporter=lcov --reporter=junit --reporter-outfile=junit.xml",
+    "test:contract": "bun test test/contract",
     "test:mutation": "stryker run",
     "typecheck": "tsc --noEmit"
   },
