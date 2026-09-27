@@ -1,5 +1,12 @@
 # Changelog
 
+## [3.1.1](https://github.com/alrayyes/forge-dashboard-sdk-node/compare/v3.1.0...v3.1.1) (2026-09-27)
+
+
+### Bug Fixes
+
+* **hooks:** add prepare script so lefthook actually installs ([#32](https://github.com/alrayyes/forge-dashboard-sdk-node/issues/32)) ([2b3939b](https://github.com/alrayyes/forge-dashboard-sdk-node/commit/2b3939bf23f290f119f6d8b65e9b3f26ca893f69))
+
 ## [3.1.0](https://github.com/alrayyes/forge-dashboard-sdk-node/compare/v3.0.0...v3.1.0) (2026-09-27)
 
 
