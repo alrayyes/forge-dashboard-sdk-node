@@ -34,6 +34,35 @@ jobs:
             junit.xml
           retention-days: 1
 
+  contract:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
+        with:
+          bun-version: "1.3.14"
+      - run: bun install --frozen-lockfile
+      - name: Start Prism mock from the pinned spec
+        run: |
+          docker run -d --name prism -p 4010:4010 \
+            -v "$(pwd)/openapi:/spec:ro" \
+            stoplight/prism:5 mock -h 0.0.0.0 -m false /spec/openapi.yaml
+          # -m false: Prism's default multiprocess (Node cluster) mode
+          # crashes on startup in this image -- see hush-hush-go's
+          # CLAUDE.md for the reproduction.
+          for _ in $(seq 1 30); do
+            curl -sf http://localhost:4010 >/dev/null 2>&1 && break
+            sleep 1
+          done
+      - name: Run contract tests against the mock
+        run: bun run test:contract
+        env:
+          FORGE_DASHBOARD_BASE_URL: http://localhost:4010
+      - name: Prism logs
+        if: failure()
+        run: docker logs prism
+
   # Separate from `test` (and deliberately not in branch protection's
   # required checks) so a missing CODECOV_TOKEN -- expected until Ryan
   # sets one, per README/CONTRIBUTING -- can't block every future merge,
