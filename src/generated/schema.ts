@@ -513,6 +513,14 @@ export interface paths {
          *     looks up the repo's configured default merge style first and
          *     passes that explicitly. Neither takes a method override here;
          *     picking one is out of scope for this endpoint.
+         *
+         *     When the forge refuses the merge, the server re-reads the pull
+         *     request's real current state and answers an `ActionError`: a `code`
+         *     from a fixed set plus a short `message` safe to show a person, so
+         *     every client gets the same reason without parsing forge text. A
+         *     pull request that is already merged or closed answers
+         *     `already_merged` / `already_closed`. If the re-read itself fails,
+         *     the original forge error is returned with `code: unknown`.
          */
         post: operations["mergePullRequest"];
         delete?: never;
@@ -1129,6 +1137,26 @@ export interface components {
         };
         Error: {
             error: string;
+        };
+        /** @description The structured result of a refused pull request action (Merge today; the other actions adopt it next, so it isn't merge-specific). `error` is the same string every Error carries (the forge's own text, for logs); `code` and `message` are what a client should act on and show. */
+        ActionError: {
+            /** @description The underlying error text, unchanged. */
+            error: string;
+            /**
+             * @description Why the action was refused, from a re-read of the pull
+             *     request's real state. `already_merged` and `already_closed`
+             *     mean the dashboard's row was stale: the pull request has
+             *     nothing left to merge.
+             * @enum {string}
+             */
+            code: "already_merged" | "already_closed" | "not_mergeable" | "conflict" | "behind" | "checks_pending" | "checks_failing" | "blocked_by_protection" | "permission" | "rate_limited" | "unknown";
+            /** @description A short reason in plain words, safe to show a person. */
+            message: string;
+            /**
+             * Format: date-time
+             * @description Only with `rate_limited`, when the forge said so. When the budget comes back.
+             */
+            resetsAt?: string;
         };
         RegisterBeginRequest: {
             /** @example ryan */
@@ -2792,49 +2820,54 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description The forge rejected the request as unauthorized — the saved token's scope doesn't cover merging, or it isn't allowed to merge on that repo. */
+            /** @description The forge rejected the request as unauthorized — the saved token's scope doesn't cover merging, or it isn't allowed to merge on that repo. `code` is `permission`. */
             403: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Error"];
+                    "application/json": components["schemas"]["ActionError"];
                 };
             };
-            /** @description The forge reported the repo or pull request doesn't exist (or isn't visible to this token). */
+            /** @description The forge reported the repo or pull request doesn't exist (or isn't visible to this token). `code` is `unknown`. */
             404: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Error"];
+                    "application/json": components["schemas"]["ActionError"];
                 };
             };
-            /** @description The forge rejected the merge because the pull request isn't currently mergeable — a real conflict, or its state changed since the dashboard's last refresh. */
+            /**
+             * @description The forge refused the merge and the pull request's current
+             *     state says why. `code` is one of `already_merged`,
+             *     `already_closed`, `not_mergeable`, `conflict`, `behind`,
+             *     `checks_pending`, `checks_failing` or `blocked_by_protection`.
+             */
             409: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Error"];
+                    "application/json": components["schemas"]["ActionError"];
                 };
             };
-            /** @description The forge rate-limited the request. */
+            /** @description The forge rate-limited the request. `code` is `rate_limited`; `resetsAt` carries when the budget comes back, when the forge said. */
             429: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Error"];
+                    "application/json": components["schemas"]["ActionError"];
                 };
             };
-            /** @description The forge was unreachable, or answered with something this app couldn't classify more specifically. */
+            /** @description The forge was unreachable, or answered with something this app couldn't classify, or the follow-up re-read failed. `code` is `unknown`. */
             502: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Error"];
+                    "application/json": components["schemas"]["ActionError"];
                 };
             };
         };
