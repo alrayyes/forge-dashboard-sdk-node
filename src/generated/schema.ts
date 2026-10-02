@@ -1528,6 +1528,8 @@ export interface components {
             rateLimitGraphQL?: components["schemas"]["RateLimit"];
             /** @description The forge's REST budget, from real X-RateLimit-* response headers. For GitHub, this is checkWebhooks and every write action (merge, update branch, comment, label) — a different 5000/hour allowance from rateLimitGraphQL, not a duplicate of it. Omitted on a poll that made no REST call at all (no webhook path configured). For Forgejo, or any forge reached through GenericSource, this is the only budget there is to report — GenericSource makes exclusively REST-style calls. */
             rateLimitREST?: components["schemas"]["RateLimit"];
+            /** @description Why a "@dependabot" comment sent through this forge's credential would be refused. Dependabot only honours commands from a user with push access and ignores GitHub App accounts whatever permissions the App holds. Set only for GitHub when the connected credential is an App with no personal access token saved to send commands as. The Dependabot buttons lock with this text, auto-update-branch skips Dependabot pull requests, and the dependabot-action endpoint answers 409 with it. Omitted when commands work. */
+            dependabotCommandsBlocked?: string;
         };
         /** @description One of a forge API's own request budgets for the credential the last refresh used — see ForgeHealth.rateLimitGraphQL/rateLimitREST for which budget this is and when each is (or isn't) reported. */
         RateLimit: {
@@ -3070,7 +3072,14 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description The forge rejected the comment because of the pull request's current state. */
+            /**
+             * @description Either the forge rejected the comment because of the pull
+             *     request's current state, or Dependabot would refuse it:
+             *     the connected GitHub credential is an App with no personal
+             *     access token saved, and Dependabot ignores App accounts. The
+             *     error text is ForgeHealth.dependabotCommandsBlocked in the
+             *     second case. Nothing was posted.
+             */
             409: {
                 headers: {
                     [name: string]: unknown;
