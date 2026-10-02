@@ -1634,6 +1634,19 @@ export interface components {
              *     genuinely doesn't know.
              */
             autoMergeEnabled?: boolean;
+            /**
+             * @description Whether GitHub will accept an "Enable auto-merge" request for
+             *     this pull request from the signed-in viewer, read from the
+             *     GraphQL `PullRequest.viewerCanEnableAutoMerge` field. GitHub
+             *     decides this per viewer and per pull request: auto-merge needs
+             *     something on the base branch to wait for (required checks or
+             *     reviews from a branch protection rule or ruleset), so a stacked
+             *     pull request on an unprotected base reports false even when the
+             *     repository allows auto-merge. Omitted when unknown (the
+             *     unauthenticated REST fallback, and Forgejo), never false in
+             *     that case, so clients keep today's behaviour.
+             */
+            autoMergeAllowed?: boolean;
             review?: components["schemas"]["ReviewState"];
         };
         /**
