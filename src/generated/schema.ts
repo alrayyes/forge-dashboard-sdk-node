@@ -1479,6 +1479,14 @@ export interface components {
             state: components["schemas"]["CheckState"];
             /** @description That job's own page on the forge that ran it — never the pull request's own page. */
             url: string;
+            /**
+             * @description Whether the base branch's protection makes this check block the
+             *     merge (GitHub required status checks and rulesets, Forgejo
+             *     `status_check_contexts`). Absent when the forge can't tell — a
+             *     token that can't read protection, or a check that can't be
+             *     mapped to a protection entry. Absent is not the same as false.
+             */
+            required?: boolean;
         };
         PullRequestChecksResponse: {
             checks: components["schemas"]["Check"][];
