@@ -842,6 +842,37 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/readyz": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Readiness
+         * @description Answers 200 once the server can actually serve: the database answers
+         *     a ping with its schema in place, and the first dashboard refresh has
+         *     completed. A refresh that finished with a forge unreachable still
+         *     counts, and a forge going unreachable afterwards never turns this
+         *     into a 503 — see forges[].reachable on the dashboard response for
+         *     that. Before any account has signed in there is no refresh to wait
+         *     for, so only the database is checked.
+         *
+         *     The container's HEALTHCHECK probes this path (`/healthz` stays the
+         *     cheap liveness answer), so Docker's single health state and Compose's
+         *     `depends_on: condition: service_healthy` mean "ready", not just
+         *     "started".
+         */
+        get: operations["ready"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/healthz": {
         parameters: {
             query?: never;
@@ -3699,6 +3730,48 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
+    ready: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The server can serve. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "status": "ok"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["Health"];
+                };
+            };
+            /**
+             * @description Not ready yet, or the database is failing. The body carries a
+             *     short reason only: no paths, no driver errors, no secrets.
+             */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": "database unavailable"
+                     *     }
+                     */
                     "application/json": components["schemas"]["Error"];
                 };
             };
