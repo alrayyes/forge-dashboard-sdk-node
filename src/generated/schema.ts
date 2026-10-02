@@ -149,7 +149,7 @@ export interface paths {
         };
         /**
          * List the signed-in user's own passkeys
-         * @description Every passkey on the account (#355), oldest first — not just the
+         * @description Every passkey on the account, oldest first — not just the
          *     one used to establish the current session.
          */
         get: operations["listCredentials"];
@@ -175,7 +175,7 @@ export interface paths {
          * @description The authenticated counterpart to POST /api/auth/register/begin —
          *     that one only ever works for a brand-new, credential-less
          *     account; this is how an already-registered user adds a second
-         *     (or third...) passkey, e.g. a laptop and a security key (#355).
+         *     (or third...) passkey, e.g. a laptop and a security key.
          */
         post: operations["beginAddCredential"];
         delete?: never;
@@ -213,7 +213,7 @@ export interface paths {
         post?: never;
         /**
          * Remove one of the signed-in user's own passkeys
-         * @description Refused on the account's last remaining passkey (#355) — this
+         * @description Refused on the account's last remaining passkey — this
          *     app is WebAuthn-only with no password fallback, so deleting it
          *     would lock the account out entirely.
          */
@@ -263,7 +263,7 @@ export interface paths {
         /**
          * The signed-in user's own saved theme preference
          * @description A lightweight, side-effect-free read of one field — theme — for
-         *     every page to check on load (#352). Deliberately not
+         *     every page to check on load. Deliberately not
          *     GET /api/settings itself: that handler also provisions webhook
          *     credentials on first call (EnsureWebhookCredentials), which
          *     every page loading shouldn't trigger for a user who's never
@@ -272,7 +272,7 @@ export interface paths {
         get: operations["getTheme"];
         /**
          * Save the signed-in user's own theme preference
-         * @description A dedicated, instant save (#352) — deliberately not routed
+         * @description A dedicated, instant save — deliberately not routed
          *     through the main PUT /api/settings, whose every other field is
          *     a plain replace rather than a per-field merge: a request
          *     carrying only theme through that handler would blank every
@@ -298,7 +298,7 @@ export interface paths {
         };
         /**
          * The signed-in user's own saved dashboard/Insights filter state
-         * @description A lightweight read of one opaque blob (#353), deliberately not
+         * @description A lightweight read of one opaque blob, deliberately not
          *     GET /api/settings itself for the same reason GET /api/settings/theme
          *     isn't either: this loads on every dashboard/Insights visit and
          *     shouldn't provision webhook credentials as a side effect.
@@ -310,7 +310,7 @@ export interface paths {
          * @description A dedicated, lightweight save separate from the main
          *     PUT /api/settings — filters change on nearly every click, a
          *     mismatch for that endpoint's "always a full form submit"
-         *     convention (#353). The body replaces the saved state entirely,
+         *     convention. The body replaces the saved state entirely,
          *     the same "always a full submit, just of a much smaller and
          *     much more frequent thing" shape as the main settings PUT, not a
          *     partial patch. Filters.js's own client-side code decides when
@@ -411,11 +411,11 @@ export interface paths {
         put?: never;
         /**
          * Hide one tracked repo's pull requests, issues, or both from the dashboard and Insights
-         * @description Reversible, not destructive (#363): the repo itself keeps
+         * @description Reversible, not destructive: the repo itself keeps
          *     appearing in GET /api/dashboard's `repos` array with accurate
          *     webhook-coverage status, and keeps being fetched and counted —
          *     only the pullRequests and/or issues entries the request scopes
-         *     (#511) stop appearing there and on Insights. A repeat call
+         *     stop appearing there and on Insights. A repeat call
          *     replaces the previously saved scope rather than merging with it
          *     (ignoring PRs only, then issues only, ends with only issues
          *     ignored) — idempotent for an identical repeat, not additive
@@ -461,8 +461,8 @@ export interface paths {
         /**
          * Turn on automatic branch updates for one tracked repo
          * @description Any of this repo's pull requests the background refresh finds
-         *     behind its base branch gets updated automatically from then on
-         *     (#365), the same as clicking "Update branch" would — suppressed
+         *     behind its base branch gets updated automatically from then on, the same as clicking
+         *     "Update branch" would — suppressed
          *     for a bot-managed pull request unless bot-PR updates are
          *     separately allowed. Idempotent: enabling an already-enabled repo
          *     is a no-op, not an error.
@@ -1138,7 +1138,7 @@ export interface components {
             [key: string]: unknown;
         };
         /**
-         * @description The dashboard/Insights filter bar's own saved shape (#353) —
+         * @description The dashboard/Insights filter bar's own saved shape —
          *     whatever `filters.js`'s `loadState`/`saveState` already produce
          *     client-side (shared forge/repo/label/author/title/created/
          *     updated/groupBy, plus the two board-owned extras with no
@@ -1263,7 +1263,7 @@ export interface components {
             /**
              * Format: int64
              * @description The installation ID of the alrayyes-automation GitHub App
-             *     this user has connected (#620), or 0 if none. Not a
+             *     this user has connected, or 0 if none. Not a
              *     secret — it's an opaque integer GitHub already shows the
              *     user on its own installation settings page — so, unlike
              *     githubTokenSet, this round-trips as a plain value. Takes
@@ -1307,7 +1307,7 @@ export interface components {
              */
             renovateRebaseLabel: string;
             /**
-             * @description The signed-in user's own theme preference (#352). Empty
+             * @description The signed-in user's own theme preference. Empty
              *     means "system" — follow the browser's prefers-color-scheme
              *     rather than a saved choice. Set only from Settings; every
              *     other page reads it via the lightweight
@@ -1349,7 +1349,7 @@ export interface components {
             theme: "" | "light" | "dark";
         };
         /**
-         * @description A registered passkey's own metadata (#355) — never the
+         * @description A registered passkey's own metadata — never the
          *     credential itself, which never leaves the authenticator that
          *     created it; WebAuthn's whole design is that the server only ever
          *     sees a public key and signed assertions, not a secret to lose.
@@ -1375,7 +1375,7 @@ export interface components {
             createdAt: string;
             /**
              * Format: date-time
-             * @description When this token stops authenticating requests (#356) —
+             * @description When this token stops authenticating requests —
              *     always set, mandatory at creation, no "never expires"
              *     option. A token whose expiration has passed is rejected the
              *     same way an invalid one is.
@@ -1391,8 +1391,8 @@ export interface components {
             label: string;
             /**
              * Format: date-time
-             * @description Must be in the future and no more than 366 days out (#356,
-             *     matching GitHub's own fine-grained-token maximum) — the
+             * @description Must be in the future and no more than 366 days out (matching
+             *     GitHub's own fine-grained-token maximum) — the
              *     Settings UI offers 7/30/60/90-day presets (30 pre-selected)
              *     or a custom date within that same cap, never an option for
              *     no expiration at all.
@@ -1422,7 +1422,7 @@ export interface components {
             fullName: string;
         };
         /**
-         * @description Which repo to ignore, and in which scope(s) (#511). At least one
+         * @description Which repo to ignore, and in which scope(s). At least one
          *     of prs/issues must be true — a request with both false is
          *     rejected with 400 rather than silently doing nothing; use POST
          *     /api/repos/unignore to clear both at once instead.
@@ -1524,7 +1524,7 @@ export interface components {
             errorKind?: components["schemas"]["ForgeErrorKind"];
             /** @description Repositories with write access this forge reported. */
             repoCount: number;
-            /** @description GitHub's GraphQL budget (#361) — a completely separate 5000/hour allowance from rateLimitREST, populated from the rateLimit block GitHub embeds in every GraphQL response. Never set for a forge with no GraphQL API (Forgejo). */
+            /** @description GitHub's GraphQL budget — a completely separate 5000/hour allowance from rateLimitREST, populated from the rateLimit block GitHub embeds in every GraphQL response. Never set for a forge with no GraphQL API (Forgejo). */
             rateLimitGraphQL?: components["schemas"]["RateLimit"];
             /** @description The forge's REST budget, from real X-RateLimit-* response headers. For GitHub, this is checkWebhooks and every write action (merge, update branch, comment, label) — a different 5000/hour allowance from rateLimitGraphQL, not a duplicate of it. Omitted on a poll that made no REST call at all (no webhook path configured). For Forgejo, or any forge reached through GenericSource, this is the only budget there is to report — GenericSource makes exclusively REST-style calls. */
             rateLimitREST?: components["schemas"]["RateLimit"];
@@ -1540,7 +1540,7 @@ export interface components {
              * @description When the window resets and remaining goes back to limit.
              */
             resetsAt: string;
-            /** @description The point price the most recent call was actually charged (#440) — GraphQL-specific, since a REST request has no separate cost concept beyond the flat one-request-one-point REST's own budget already counts. Omitted for a REST-sourced RateLimit. */
+            /** @description The point price the most recent call was actually charged — GraphQL-specific, since a REST request has no separate cost concept beyond the flat one-request-one-point REST's own budget already counts. Omitted for a REST-sourced RateLimit. */
             cost?: number;
         };
         PullRequest: {
@@ -1640,20 +1640,20 @@ export interface components {
             url: string;
             /**
              * @description Whether the signed-in user has ignored this repo in either
-             *     scope below (#363, #511) — true whenever ignoredPRs or
+             *     scope below — true whenever ignoredPRs or
              *     ignoredIssues is true. The repo itself still appears here
              *     with accurate hasWebhook/canManageWebhooks regardless.
              */
             ignored: boolean;
             /**
              * @description Whether the signed-in user has ignored this repo's pull
-             *     requests specifically (#511) — its pullRequests entries are
+             *     requests specifically — its pullRequests entries are
              *     excluded from this same response and from Insights.
              */
             ignoredPRs: boolean;
             /**
              * @description Whether the signed-in user has ignored this repo's issues
-             *     specifically (#511) — its issues entries are excluded from
+             *     specifically — its issues entries are excluded from
              *     this same response and from Insights.
              */
             ignoredIssues: boolean;
@@ -1680,7 +1680,7 @@ export interface components {
             canManageWebhooks: boolean;
             /**
              * @description Whether the signed-in user has turned on automatic branch
-             *     updates for this repo (#365) — any of its pull requests the
+             *     updates for this repo — any of its pull requests the
              *     background refresh finds behind its base branch gets updated
              *     the same way a manual "Update branch" click would. A
              *     Dependabot pull request gets its own rebase comment instead,
@@ -2012,8 +2012,8 @@ export interface operations {
         parameters: {
             query: {
                 /**
-                 * @description A name the user recognizes, e.g. "MacBook" or "YubiKey"
-                 *     (#355) — prompted for at registration time, never derived
+                 * @description A name the user recognizes, e.g. "MacBook" or "YubiKey",
+                 *     prompted for at registration time, never derived
                  *     from the authenticator itself.
                  */
                 label: string;
