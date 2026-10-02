@@ -462,9 +462,9 @@ export interface paths {
          * Turn on automatic branch updates for one tracked repo
          * @description Any of this repo's pull requests the background refresh finds
          *     behind its base branch gets updated automatically from then on, the same as clicking
-         *     "Update branch" would — suppressed
-         *     for a bot-managed pull request unless bot-PR updates are
-         *     separately allowed. Idempotent: enabling an already-enabled repo
+         *     "Update branch" would, except that a Dependabot pull request gets
+         *     its rebase comment and a Renovate one its rebase label instead, and
+         *     a release-please pull request is skipped. Idempotent: enabling an already-enabled repo
          *     is a no-op, not an error.
          */
         post: operations["enableAutoUpdateBranch"];
@@ -1761,9 +1761,10 @@ export interface components {
              *     Dependabot pull request gets its own rebase comment instead,
              *     and a Renovate one its own rebase label, mirroring their
              *     manual action buttons. A release-please pull request is
-             *     always skipped: it regenerates its own branch and changelog
-             *     on every push to the base branch, and has no dedicated
-             *     rebase/label action the way Dependabot and Renovate do.
+             *     always skipped by this background pass, so no unattended write
+             *     lands on a release branch. The dashboard's manual "Update
+             *     branch" button is still offered on it, since release-please
+             *     has no rebase action of its own.
              */
             autoUpdateBranch: boolean;
         };
