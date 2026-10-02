@@ -1595,6 +1595,40 @@ export interface components {
              *     genuinely doesn't know.
              */
             autoMergeEnabled?: boolean;
+            review?: components["schemas"]["ReviewState"];
+        };
+        /**
+         * @description Where a pull request stands on code review. The whole object is
+         *     omitted when the owning forge couldn't report it (a Forgejo
+         *     reviews call that failed, a draft Forgejo pull request this
+         *     service doesn't spend a call on), so a missing "review" means
+         *     "unknown" and never "nobody reviewed it."
+         *
+         *     GitHub: read from fields on the existing GraphQL query
+         *     (reviewDecision, reviewRequests, latestReviews), so it adds no
+         *     per-pull-request requests. Forgejo: requestedReviewers comes free
+         *     on the pull request list, but approvals and the decision need one
+         *     reviews call per open, non-draft pull request, cached until that
+         *     pull request's updatedAt changes.
+         */
+        ReviewState: {
+            /**
+             * @description "approved" and "changes_requested" mean what they say.
+             *     "review_required" means a review is still outstanding: GitHub
+             *     says so itself when branch protection requires one, and on
+             *     Forgejo it means reviewers are requested and nobody has
+             *     approved. "none" means no review activity and nothing
+             *     required or requested.
+             * @enum {string}
+             */
+            decision: "approved" | "changes_requested" | "review_required" | "none";
+            /**
+             * @description Reviewers whose latest review is an approval. GitHub counts
+             *     at most the 10 most recent reviewers.
+             */
+            approvals: number;
+            /** @description Users and teams still asked to review. */
+            requestedReviewers: number;
         };
         Issue: {
             forge: components["schemas"]["Forge"];
