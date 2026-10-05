@@ -64,11 +64,10 @@ jobs:
         run: docker logs prism
 
   # Separate from `test` (and deliberately not in branch protection's
-  # required checks) so a missing CODECOV_TOKEN -- expected until Ryan
-  # sets one, per README/CONTRIBUTING -- can't block every future merge,
-  # release-please's own PR included. `fail_ci_if_error: true` still
-  # surfaces a real upload problem loudly once the token exists; it just
-  # doesn't gate anything while it's known-pending.
+  # required checks) so a Codecov outage or a bad CODECOV_TOKEN can't block
+  # every future merge, release-please's own PR included.
+  # `fail_ci_if_error: true` still surfaces a real upload problem loudly;
+  # it just doesn't gate anything.
   coverage:
     needs: test
     if: ${{ !cancelled() }}
