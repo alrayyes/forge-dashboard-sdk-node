@@ -1,5 +1,12 @@
 # Changelog
 
+## [3.10.1](https://github.com/alrayyes/forge-dashboard-sdk-node/compare/v3.10.0...v3.10.1) (2026-10-05)
+
+
+### Bug Fixes
+
+* bump @types/node from 26.6.2 to 26.6.3 in the npm-minor-patch group ([#54](https://github.com/alrayyes/forge-dashboard-sdk-node/issues/54)) ([5769741](https://github.com/alrayyes/forge-dashboard-sdk-node/commit/57697415414e95b24b01a6f0d0f024ffc317e661))
+
 ## [3.10.0](https://github.com/alrayyes/forge-dashboard-sdk-node/compare/v3.9.0...v3.10.0) (2026-10-02)
 
 
