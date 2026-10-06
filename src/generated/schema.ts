@@ -1755,6 +1755,42 @@ export interface components {
             /** @description Whether to ignore this repo's issues. */
             issues: boolean;
         };
+        /**
+         * @description Where an armed Forgejo pull request stands, so the row can say why
+         *     auto-merge is waiting or stopped in words and not by colour. Present
+         *     only while the signed-in user has auto-merge armed on it. This app
+         *     holds that intent itself, so GitHub's own auto-merge never has it.
+         */
+        AutoMergeStatus: {
+            /**
+             * @description `waiting` clears by itself: checks still running, a draft, a
+             *     stack parent that hasn't merged, a rate limit. `stopped` needs the
+             *     person: a failing check, a conflict, or a merge Forgejo refused
+             *     (including a token without merge permission). A stopped pull
+             *     request stays armed and merges once the cause is gone, or the
+             *     person cancels.
+             * @enum {string}
+             */
+            state: "waiting" | "stopped";
+            /**
+             * @description The same codes as `ActionError.code` (`checks_pending`,
+             *     `checks_failing`, `conflict`, `stacked`, `permission`,
+             *     `rate_limited`, `not_mergeable`). Omitted when the pull request
+             *     is simply waiting for the next refresh to merge it.
+             */
+            code?: string;
+            /** @description Plain words, safe to show a person. */
+            message: string;
+        };
+        AutoMergedPullRequest: {
+            forge: components["schemas"]["Forge"];
+            fullName: string;
+            number: number;
+            /** Format: date-time */
+            mergedAt: string;
+            /** @description Ready to show: "Auto-merged owner/repo#N after checks passed". */
+            message: string;
+        };
         /** @description Which pull request to act on. */
         PullRequestActionRequest: {
             forge: components["schemas"]["Forge"];
@@ -2082,6 +2118,7 @@ export interface components {
              *     flight can still stop an offered action.
              */
             allowedActions: components["schemas"]["AllowedAction"][];
+            autoMerge?: components["schemas"]["AutoMergeStatus"];
             /**
              * @description True when the pull request is mergeable, its CI is green and it
              *     isn't a draft: what the Ready quick filter lists. Always
@@ -2238,6 +2275,14 @@ export interface components {
             updatedAt: string;
         };
         Dashboard: {
+            /**
+             * @description Pull requests this app auto-merged in the last ten minutes, newest
+             *     first. They have already left `pullRequests`, so this is how a
+             *     client shows "Auto-merged owner/repo#N after checks passed". Always
+             *     present, empty when there are none. A client shows each one once,
+             *     matched on `forge`, `fullName`, `number` and `mergedAt`.
+             */
+            autoMerged: components["schemas"]["AutoMergedPullRequest"][];
             /**
              * @description How many of `issues` are real work: all of them except the
              *     `housekeeping` ones. What the Issues badge shows.
