@@ -14,6 +14,9 @@ hand-rolling HTTP requests and retries against the API yourself.
 
 Full API reference: <https://alrayyes.github.io/forge-dashboard-sdk-node/>
 
+Test and coverage reports from the latest green run on `main`:
+<https://apis.ryankes.eu/forge-dashboard-sdk-node/reports/>
+
 ## Requirements
 
 - Node.js 20+ or [Bun](https://bun.sh) 1.1+ — anything with a native `fetch`.
