@@ -1335,7 +1335,7 @@ export interface components {
             message: string;
             /**
              * Format: date-time
-             * @description Only with `rate_limited`, when the forge said so. When the budget comes back.
+             * @description Only with `rate_limited`, when the forge said so. When the budget comes back. On Forgejo it comes from the `Retry-After` header, in seconds or as a date.
              */
             resetsAt?: string;
         };
