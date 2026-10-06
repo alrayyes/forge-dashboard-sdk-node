@@ -30,11 +30,13 @@ so that's the one command to run before opening a pull request.
 
 ## Published reports
 
-`.github/workflows/docs.yml` runs the tests with coverage on every push to
-`main` and publishes the results next to the API reference, under
+`.github/workflows/docs.yml` runs the tests with coverage and assembles the
+reports on every pull request, so a broken step fails before the merge. A push
+to `main` publishes the results next to the API reference, under
 `/reports/` (`tests/junit.xml`, `coverage/index.html`,
 `coverage/coverage.xml` in Cobertura format, `coverage/lcov.info`). A red
-test run stops the job before anything is deployed. To build the same tree
+test run stops the job before anything is deployed, and a step after the
+deploy fetches the live `coverage.xml` to check it's served. To build the same tree
 locally you need `lcov_cobertura` (`pip install lcov_cobertura`) and
 `genhtml` (the `lcov` package):
 
