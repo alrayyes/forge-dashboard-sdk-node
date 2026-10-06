@@ -1,5 +1,16 @@
 # Changelog
 
+## [4.0.0](https://github.com/alrayyes/forge-dashboard-sdk-node/compare/v3.10.2...v4.0.0) (2026-10-06)
+
+
+### ⚠ BREAKING CHANGES
+
+* **ci:** a
+
+### Bug Fixes
+
+* **ci:** skip git hooks when regenerating from the spec ([#68](https://github.com/alrayyes/forge-dashboard-sdk-node/issues/68)) ([c3bf94a](https://github.com/alrayyes/forge-dashboard-sdk-node/commit/c3bf94a011b1352deabffdf5f31993b54a2acf6e))
+
 ## [3.10.2](https://github.com/alrayyes/forge-dashboard-sdk-node/compare/v3.10.1...v3.10.2) (2026-10-06)
 
 
