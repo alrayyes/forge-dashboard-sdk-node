@@ -36,7 +36,7 @@
   },
   "overrides": {
     "qs": "6.16.0",
-    "smol-toml": "1.8.0"
+    "smol-toml": "1.9.0"
   },
   "dependencies": {
     "openapi-fetch": "0.17.0"
