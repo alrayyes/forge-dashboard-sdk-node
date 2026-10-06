@@ -142,3 +142,4 @@ process.
 
 [MIT](LICENSE) — a permissive license for the client, independent of
 forge-dashboard's own AGPL-3.0.
+x
