@@ -28,6 +28,21 @@ bun run build
 `lefthook run pre-push` runs the same set (plus `sort-package-json --check`),
 so that's the one command to run before opening a pull request.
 
+## Published reports
+
+`.github/workflows/docs.yml` runs the tests with coverage on every push to
+`main` and publishes the results next to the API reference, under
+`/reports/` (`tests/junit.xml`, `coverage/index.html`,
+`coverage/coverage.xml` in Cobertura format, `coverage/lcov.info`). A red
+test run stops the job before anything is deployed. To build the same tree
+locally you need `lcov_cobertura` (`pip install lcov_cobertura`) and
+`genhtml` (the `lcov` package):
+
+```sh
+bun run test:ci
+./hack/assemble-reports.sh
+```
+
 ## Regenerating the types
 
 `src/generated/schema.ts` is generated from `openapi/openapi.yaml` by
