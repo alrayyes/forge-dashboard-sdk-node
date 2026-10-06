@@ -1,5 +1,12 @@
 # Changelog
 
+## [3.10.2](https://github.com/alrayyes/forge-dashboard-sdk-node/compare/v3.10.1...v3.10.2) (2026-10-06)
+
+
+### Bug Fixes
+
+* **deps:** bump the smol-toml override to 1.9.0 ([#63](https://github.com/alrayyes/forge-dashboard-sdk-node/issues/63)) ([96e1015](https://github.com/alrayyes/forge-dashboard-sdk-node/commit/96e1015add7bd9e236c18e7b3ec1360a45ef462a))
+
 ## [3.10.1](https://github.com/alrayyes/forge-dashboard-sdk-node/compare/v3.10.0...v3.10.1) (2026-10-05)
 
 
