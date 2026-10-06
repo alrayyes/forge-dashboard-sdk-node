@@ -7,7 +7,7 @@
   `bun.lock` to a new `lockfileVersion: 2` format that Dependabot's and
   Renovate's bundled Bun (1.3.x as of this writing) can't parse and
   silently corrupts back to v1 -- staying below 1.4 here keeps the
-  dependency bot actually working (`rules/javascript.md`).
+  dependency bot actually working.
 - [lefthook](https://github.com/evilmartians/lefthook). `bun install` then
   `lefthook install` once, after cloning.
 
@@ -60,9 +60,9 @@ bun run generate
 ```
 
 Diff `openapi/openapi.yaml` (not the generated types) to decide whether a
-change needs a major, minor or patch bump -- see
-[`rules/sdk-generation.md`](https://git.higherlearning.eu/alrayyes/dotfiles/src/branch/master/private_dot_config/claude/rules/sdk-generation.md)'s
-"Versioning tracks the contract, not the commits". `.github/workflows/
+change needs a major, minor or patch bump: versioning tracks the contract,
+not the commits, and a purely additive spec change can still rewrite every
+generated file. `.github/workflows/
 regenerate.yml` already does this automatically with `oasdiff`, picking
 `feat`/`fix` and adding a `BREAKING CHANGE:` footer as needed; a manual
 regeneration should classify the diff the same way before writing the
@@ -76,10 +76,10 @@ the generated TypeScript reads like every other language's client with the
 syntax swapped rather than like hand-written TS. `openapi-typescript`
 (types only, no runtime) plus `openapi-fetch` (a ~6&nbsp;KB typed wrapper
 around the platform `fetch`) produces a client that's genuinely idiomatic
-and has almost no dependency weight of its own -- see
-[`rules/sdk-generation.md`](https://git.higherlearning.eu/alrayyes/dotfiles/src/branch/master/private_dot_config/claude/rules/sdk-generation.md)'s
-"Generated vs hand-written" for the tradeoff this account weighs for every
-generated SDK.
+and has almost no dependency weight of its own. Generating the types keeps
+them from drifting from the spec, while the client behaviour on top
+(retries, auth, error typing) stays hand-written where a generator's
+output would be generic.
 
 `src/generated/schema.ts` is the generated boundary -- types only. Every
 other file under `src/` (the client wrapper, auth, retry, error typing) is
