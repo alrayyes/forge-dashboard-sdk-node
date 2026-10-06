@@ -289,6 +289,35 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/settings/timezone": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The signed-in user's own saved time zone
+         * @description A lightweight, side-effect-free read of one field, for every page to
+         *     check on load so it can show times in the user's zone. Deliberately
+         *     not GET /api/settings, for the reason GET /api/settings/theme isn't.
+         *     Empty means "use the browser's own zone".
+         */
+        get: operations["getTimezone"];
+        /**
+         * Save the signed-in user's own time zone
+         * @description A dedicated, instant save, not routed through PUT /api/settings,
+         *     which replaces every other field. Exists for browsers that report
+         *     UTC to every page, such as Firefox with fingerprint resistance.
+         */
+        put: operations["setTimezone"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/settings/filter-state": {
         parameters: {
             query?: never;
@@ -303,6 +332,8 @@ export interface paths {
          *     isn't either: this loads on every dashboard/Insights visit and
          *     shouldn't provision webhook credentials as a side effect.
          *     `{}` for a user who's never saved any filters yet, not a 404.
+         *     These are the web UI's own state: a signed-in browser session only,
+         *     and a personal API token is refused with 403 (#1000).
          */
         get: operations["getFilterState"];
         /**
@@ -316,6 +347,9 @@ export interface paths {
          *     partial patch. Filters.js's own client-side code decides when
          *     to call this: immediately for a discrete control, debounced
          *     while the user is still typing in the free-text Title filter.
+         *     A signed-in browser session only: a personal API token is refused
+         *     with 403, so a script or agent can't change the filters the user
+         *     sees (#1000). Each save is logged with the user agent.
          */
         put: operations["setFilterState"];
         post?: never;
@@ -392,6 +426,15 @@ export interface paths {
          *     One of a small number of endpoints in this API that write to a
          *     forge rather than just reading from it — see also the
          *     pull-requests tag.
+         *
+         *     A refusal from the forge (403, 404, 429 and 502) answers with the
+         *     same `ActionError` a refused pull request action does, so a client
+         *     reads one shape: `code` is `permission` or `rate_limited` where
+         *     the forge said so (with `resetsAt` for a rate limit), and
+         *     `unknown` otherwise, with a plain `message` either way. No new
+         *     code is needed: a repo the forge can't find is `unknown` with its
+         *     own message. 400 and 401 stay a plain `Error`, since they are
+         *     about the request, not a refusal by the forge.
          */
         post: operations["ensureWebhook"];
         delete?: never;
@@ -509,7 +552,8 @@ export interface paths {
          * Merge one pull request, on the signed-in user's behalf
          * @description Merges the named pull request using its repo's own configured
          *     default merge method — GitHub is asked to pick its own repo
-         *     default; Forgejo's API has no such default built in, so this
+         *     default, except that a base branch requiring linear history gets
+         *     squash or rebase, never a merge commit; Forgejo's API has no such default built in, so this
          *     looks up the repo's configured default merge style first and
          *     passes that explicitly. Neither takes a method override here;
          *     picking one is out of scope for this endpoint.
@@ -546,9 +590,27 @@ export interface paths {
          *     mutation asks for an explicit merge method rather than picking
          *     the repo's own default itself, so this looks the repo's allowed
          *     methods up first and picks one with the same merge > squash >
-         *     rebase precedence Merge already uses; no override is exposed
+         *     rebase precedence Merge already uses, skipping merge when the
+         *     default branch requires linear history; no override is exposed
          *     here either. The pull request stays open and unmerged until the
          *     forge's own required checks pass on their own.
+         *
+         *     When the forge refuses, the server re-reads the pull request and
+         *     answers an `ActionError` (see Merge): `already_merged` or
+         *     `already_closed` when the row was stale, otherwise a `code` and a
+         *     plain-words `message` safe to show a person.
+         *
+         *     When the pull request is on the signed-in user's board and its
+         *     `allowedActions` has no `auto_merge` entry, this server answers 409
+         *     itself and never asks the forge: `auto_merge_not_allowed`,
+         *     `already_up_to_date`, `conflict`, `stacked` or `ready_to_merge` for
+         *     the reasons the board already knows, and `not_mergeable` for
+         *     auto-merge already on or a forge that has none.
+         *     `auto_merge_not_allowed` means the repo doesn't allow auto-merge
+         *     (or not for this pull request); `ready_to_merge` means it is
+         *     already clean, so there is nothing to wait for and Merge is the
+         *     action; `checks_pending` means a non-required check is still
+         *     running, so trying again later can work.
          */
         post: operations["enablePullRequestAutoMerge"];
         delete?: never;
@@ -571,8 +633,51 @@ export interface paths {
          * @description Closes the named pull request — for one that turns out not to
          *     need merging at all (a duplicate, or one whose content already
          *     landed another way), not a substitute for Merge.
+         *
+         *     When the forge refuses, the server re-reads the pull request and
+         *     answers an `ActionError` (see Merge): `already_merged` or
+         *     `already_closed` when the row was stale, otherwise a `code` and a
+         *     plain-words `message` safe to show a person.
+         *     Closing a merged pull request is `already_merged`.
          */
         post: operations["closePullRequest"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/pull-requests/rerun-checks": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Rerun only the failed jobs of one pull request's checks, on the signed-in user's behalf
+         * @description Asks the forge to rerun the failed jobs of the Actions workflow
+         *     runs on the pull request's head commit, and nothing that passed. It
+         *     answers once the forge has queued them, not when they finish, so a
+         *     client shows a queued state and lets the next refresh carry the
+         *     result.
+         *
+         *     A pull request offers it as a `rerun_checks` entry in
+         *     `allowedActions`, on GitHub and Forgejo, when its CI is failing. A
+         *     Forgejo commit status doesn't say which workflow run it came from, so
+         *     Forgejo's runs are found by the head commit instead. A failed check
+         *     that isn't an Actions job (a third-party check, a legacy status, an
+         *     external CI) can't be rerun here and is skipped. A Forgejo instance
+         *     too old to have the rerun route refuses with its own words.
+         *
+         *     Refusals are an `ActionError` (see Merge). `not_mergeable` with a 409
+         *     means the pull request has no failed check to rerun. Anything the
+         *     forge refuses (the token may not write to Actions, the run is too
+         *     old or already running) arrives with its own plain-words `message`.
+         */
+        post: operations["rerunPullRequestChecks"];
         delete?: never;
         options?: never;
         head?: never;
@@ -596,6 +701,13 @@ export interface paths {
          *     failure; a follow-up refresh a moment later reflects the result.
          *     Forgejo's equivalent is always synchronous, so it only ever
          *     answers 204.
+         *
+         *     When the forge refuses, the server re-reads the pull request and
+         *     answers an `ActionError` (see Merge): `already_merged` or
+         *     `already_closed` when the row was stale, otherwise a `code` and a
+         *     plain-words `message` safe to show a person.
+         *     `conflict` means the branches can't be merged cleanly;
+         *     `already_up_to_date` means there was nothing to bring in.
          */
         post: operations["updatePullRequestBranch"];
         delete?: never;
@@ -621,6 +733,13 @@ export interface paths {
          *     endpoint; `action` is validated server-side to one of the two
          *     values below and nothing else is ever sent. GitHub only —
          *     Dependabot doesn't run on Forgejo.
+         *
+         *     When the forge refuses, the server re-reads the pull request and
+         *     answers an `ActionError` (see Merge): `already_merged` or
+         *     `already_closed` when the row was stale, otherwise a `code` and a
+         *     plain-words `message` safe to show a person.
+         *     A connected App with no personal token saved is `permission`, with
+         *     the reason in `message`; nothing is posted.
          */
         post: operations["postPullRequestDependabotAction"];
         delete?: never;
@@ -647,6 +766,11 @@ export interface paths {
          *     is a label rather than a comment command. Works on both GitHub
          *     and Forgejo, unlike the Dependabot actions, since Renovate runs
          *     on both.
+         *
+         *     When the forge refuses, the server re-reads the pull request and
+         *     answers an `ActionError` (see Merge): `already_merged` or
+         *     `already_closed` when the row was stale, otherwise a `code` and a
+         *     plain-words `message` safe to show a person.
          */
         post: operations["postPullRequestRenovateRebase"];
         delete?: never;
@@ -861,11 +985,23 @@ export interface paths {
          * Readiness
          * @description Answers 200 once the server can actually serve: the database answers
          *     a ping with its schema in place, and the first dashboard refresh has
-         *     completed. A refresh that finished with a forge unreachable still
-         *     counts, and a forge going unreachable afterwards never turns this
-         *     into a 503 — see forges[].reachable on the dashboard response for
-         *     that. Before any account has signed in there is no refresh to wait
-         *     for, so only the database is checked.
+         *     completed, or 30 seconds have passed since it started. The wait is
+         *     bounded because how fast a forge answers is how fresh the data is,
+         *     not whether the server can serve: a slow or unreachable forge must not
+         *     keep the container unready. A refresh that finished with a forge
+         *     unreachable counts, and a forge going unreachable afterwards never
+         *     turns this into a 503. See forges[].reachable on the dashboard
+         *     response for that. Before any account has signed in there is no
+         *     refresh to wait for, so only the database is checked.
+         *
+         *     The database ping gets 2 seconds, less than the HEALTHCHECK's own 5,
+         *     so a database that doesn't answer turns into a 503 instead of a hung
+         *     probe. The ping's result, pass or fail, is reused for about 3
+         *     seconds, so probes arriving every second don't each reach the
+         *     database. On SIGTERM this answers 503 ("shutting down") at once, and
+         *     the server waits a drain period (`SHUTDOWN_DRAIN`, default 5 seconds)
+         *     before it stops accepting connections, so a router that polls this
+         *     path stops sending traffic first.
          *
          *     The container's HEALTHCHECK probes this path (`/healthz` stays the
          *     cheap liveness answer), so Docker's single health state and Compose's
@@ -945,6 +1081,11 @@ export interface paths {
          *     it returns that user's dashboard instead — allowed only when they've
          *     shared it with the caller (or the caller is viewing their own
          *     username), and refused with a 403 otherwise.
+         *
+         *     Draft pull requests are left out unless `includeDrafts=true`. With
+         *     `owner`, the same rule applies to that user's dashboard, and
+         *     `hiddenDrafts` counts only the drafts in repos that user hasn't
+         *     ignored, the same repos whose other pull requests show.
          */
         get: operations["getDashboard"];
         put?: never;
@@ -977,6 +1118,10 @@ export interface paths {
          *     proxy that can't hold an SSE connection open just never
          *     benefits from this, rather than the dashboard going stale
          *     silently.
+         *
+         *     `includeDrafts` is read once, when the connection opens, and
+         *     applies to every event on it. A client that changes its mind
+         *     reconnects with the new value.
          */
         get: operations["streamDashboard"];
         put?: never;
@@ -1126,6 +1271,17 @@ export interface components {
             /** @constant */
             status: "ok";
         };
+        Ready: {
+            /** @constant */
+            status: "ok";
+            /** @description Goroutines the process holds right now. */
+            goroutines: number;
+            /**
+             * @description OS threads the process holds right now, read from
+             *     `/proc/self/status`. Left out where that can't be read.
+             */
+            threads?: number;
+        };
         Version: {
             /**
              * @description The release tag this binary was built from, with no leading
@@ -1137,20 +1293,45 @@ export interface components {
         };
         Error: {
             error: string;
+            /**
+             * @description Present when the rejection is about one field of the request
+             *     body (a settings save, for instance), named as it appears there,
+             *     so a client can mark that input without parsing `error`.
+             */
+            field?: string;
         };
-        /** @description The structured result of a refused pull request action (Merge today; the other actions adopt it next, so it isn't merge-specific). `error` is the same string every Error carries (the forge's own text, for logs); `code` and `message` are what a client should act on and show. */
+        /** @description The structured result of a refused pull request action (Merge, Close, Update branch, Enable auto-merge, Dependabot and Renovate rebase). `code` and `message` are what a client should act on and show. */
         ActionError: {
-            /** @description The underlying error text, unchanged. */
+            /**
+             * @description The same string every Error carries. With `code: unknown` it
+             *     is the same plain words as `message`, since the raw text
+             *     (internal prefixes, API paths, URLs) goes to the server log.
+             *     With any other code it is the forge's own text, for logs.
+             */
             error: string;
             /**
              * @description Why the action was refused, from a re-read of the pull
              *     request's real state. `already_merged` and `already_closed`
              *     mean the dashboard's row was stale: the pull request has
              *     nothing left to merge.
+             *
+             *     Three codes belong to one action each: `already_up_to_date`
+             *     (Update branch: nothing to bring in), `auto_merge_not_allowed`
+             *     (Enable auto-merge: the repo or pull request doesn't allow it)
+             *     and `ready_to_merge` (Enable auto-merge: already clean, use
+             *     Merge).
              * @enum {string}
              */
-            code: "already_merged" | "already_closed" | "not_mergeable" | "conflict" | "behind" | "checks_pending" | "checks_failing" | "blocked_by_protection" | "permission" | "rate_limited" | "unknown";
-            /** @description A short reason in plain words, safe to show a person. */
+            code: "already_merged" | "already_closed" | "not_mergeable" | "conflict" | "behind" | "checks_pending" | "checks_failing" | "blocked_by_protection" | "already_up_to_date" | "auto_merge_not_allowed" | "ready_to_merge" | "permission" | "rate_limited" | "unknown";
+            /**
+             * @description A short reason in plain words, safe to show a person, always.
+             *     With `code: unknown` it is the forge's own sentence when that
+             *     reads as one, "The forge didn't answer. Try again in a moment."
+             *     when the forge was unreachable (including a 502, 503 or 504),
+             *     and "The forge refused this action and gave no reason."
+             *     otherwise. It never holds an internal prefix, an API path, a
+             *     URL or JSON.
+             */
             message: string;
             /**
              * Format: date-time
@@ -1159,7 +1340,12 @@ export interface components {
             resetsAt?: string;
         };
         RegisterBeginRequest: {
-            /** @example ryan */
+            /**
+             * @description Surrounding whitespace is trimmed by the server, and what is
+             *     left must not be empty. Clients may check the same pattern for
+             *     quick feedback; the server decides.
+             * @example ryan
+             */
             username: string;
             /**
              * @description Ignored once an invite is required (any account already
@@ -1182,7 +1368,12 @@ export interface components {
             open: boolean;
         };
         LoginBeginRequest: {
-            /** @example ryan */
+            /**
+             * @description Surrounding whitespace is trimmed by the server, and what is
+             *     left must not be empty. Clients may check the same pattern for
+             *     quick feedback; the server decides.
+             * @example ryan
+             */
             username: string;
         };
         /**
@@ -1240,7 +1431,12 @@ export interface components {
             expiresAt: string;
         };
         AdminInviteCreateRequest: {
-            /** @example alex */
+            /**
+             * @description Surrounding whitespace is trimmed by the server, and what is
+             *     left must not be empty. Clients may check the same pattern for
+             *     quick feedback; the server decides.
+             * @example alex
+             */
             username: string;
             /** @example Alex */
             displayName: string;
@@ -1374,6 +1570,13 @@ export interface components {
              * @enum {string}
              */
             theme: "" | "light" | "dark";
+            /**
+             * @description The signed-in user's own time zone as an IANA name such as
+             *     `Europe/Amsterdam`. Empty means the browser's own zone. Set only
+             *     from Settings (PUT /api/settings/timezone); every other page reads
+             *     it via GET /api/settings/timezone.
+             */
+            timezone?: string;
         };
         /**
          * @description Replaces the signed-in user's saved GitHub/Forgejo configuration.
@@ -1390,8 +1593,19 @@ export interface components {
         SettingsRequest: {
             githubToken?: string;
             githubUsername?: string;
-            /** Format: int64 */
+            /**
+             * Format: int64
+             * @description 0 means none. A negative or non-integer value is a 400 naming
+             *     this field, as is any value on a server with no GitHub App
+             *     configured.
+             */
             githubAppInstallationId?: number;
+            /**
+             * @description Required, once the save is merged with what is already stored,
+             *     whenever a Forgejo token or username is set. That depends on
+             *     stored state, so a schema alone can't express it: a save that
+             *     breaks it is a 400 naming `forgejoUrl`.
+             */
             forgejoUrl?: string;
             forgejoToken?: string;
             forgejoUsername?: string;
@@ -1406,6 +1620,19 @@ export interface components {
         ThemeRequest: {
             /** @enum {string} */
             theme: "" | "light" | "dark";
+        };
+        /** @description See GET /api/settings/timezone's own description. */
+        TimezoneResponse: {
+            /**
+             * @description An IANA zone name such as `Europe/Amsterdam`, or empty for the browser's own.
+             * @example Europe/Amsterdam
+             */
+            timezone: string;
+        };
+        /** @description See PUT /api/settings/timezone's own description. */
+        TimezoneRequest: {
+            /** @description An IANA zone name, or empty for the browser's own. `Local` is refused. */
+            timezone: string;
         };
         /**
          * @description A registered passkey's own metadata — never the
@@ -1546,6 +1773,28 @@ export interface components {
              *     mapped to a protection entry. Absent is not the same as false.
              */
             required?: boolean;
+            /**
+             * @description How long a completed check ran. Absent while it runs, or when
+             *     the forge doesn't say. GitHub only: Forgejo's API doesn't give
+             *     a job's timing.
+             */
+            durationSeconds?: number;
+            /**
+             * @description The name of the step of a failed job that broke. Absent when
+             *     the check isn't a job the token can read (a third-party check,
+             *     a forge with no step data, a token without access).
+             */
+            failedStep?: string;
+            /**
+             * @description The tail of the failed job's log as plain text: the last lines,
+             *     with per-line timestamps and colour codes removed, at most 2,000
+             *     characters. Never markup, and a client must render it as text.
+             *     Whatever the forge already masks stays masked. Absent when the
+             *     log can't be read or has expired. GitHub only: Forgejo's API
+             *     doesn't serve job logs, so there the link to the run is all a
+             *     failed check offers.
+             */
+            excerpt?: string;
         };
         PullRequestChecksResponse: {
             checks: components["schemas"]["Check"][];
@@ -1556,11 +1805,14 @@ export interface components {
          *     stopping a merge that isn't confirmed to be a real conflict —
          *     including Forgejo's own mergeable flag reporting false, since its
          *     server computes that asynchronously and can report it stale.
+         *     "unstable" is GitHub's UNSTABLE: the pull request can be merged, but
+         *     a check that branch protection doesn't require is failing or still
+         *     running. Merge stays available.
          *     "unknown" covers both a forge that hasn't determined this yet and
          *     this service being unable to determine it.
          * @enum {string}
          */
-        MergeStatus: "mergeable" | "conflicting" | "blocked" | "unknown";
+        MergeStatus: "mergeable" | "conflicting" | "blocked" | "unstable" | "unknown";
         Label: {
             /** @example kind/bug */
             name: string;
@@ -1586,6 +1838,16 @@ export interface components {
             forge: components["schemas"]["Forge"];
             /** @description Whether the last refresh attempt against this forge succeeded. */
             reachable: boolean;
+            /**
+             * Format: date-time
+             * @description Present when the last refresh against this forge failed and the
+             *     pull requests, issues and repos in the response are the last good
+             *     ones, fetched at this time, instead of none. Absent when the data
+             *     is current, and for a forge that has never fetched successfully,
+             *     which has nothing to show. A client can say "unreachable, showing
+             *     data from 3 minutes ago".
+             */
+            staleSince?: string;
             /** @description A human-readable explanation of the last failure, if reachable is false. Mapped from errorKind, not the raw underlying error text. Omitted when reachable. */
             error?: string;
             errorKind?: components["schemas"]["ForgeErrorKind"];
@@ -1611,6 +1873,18 @@ export interface components {
             resetsAt: string;
             /** @description The point price the most recent call was actually charged — GraphQL-specific, since a REST request has no separate cost concept beyond the flat one-request-one-point REST's own budget already counts. Omitted for a REST-sourced RateLimit. */
             cost?: number;
+            /**
+             * @description How worried a client should be about this budget, graded by
+             *     the server as of the response, so no client needs its own
+             *     threshold or clock check. `exceeded`: nothing left and the
+             *     reset hasn't been seen to pass. `low`: under 5% left (also a
+             *     spent budget whose reset time has passed, until the next
+             *     snapshot says otherwise). `warning`: under 20% left but not
+             *     yet low, for a gauge's amber stage; a banner or a lock has no
+             *     reason to act on it. `ok`: everything else.
+             * @enum {string}
+             */
+            severity: "ok" | "warning" | "low" | "exceeded";
         };
         PullRequest: {
             forge: components["schemas"]["Forge"];
@@ -1646,6 +1920,93 @@ export interface components {
              */
             behind: boolean;
             /**
+             * @description The commit the pull request's head branch points at. A bot's
+             *     rebase moves it, which shows the bot acted even when the pull
+             *     request is still reported behind, or wasn't behind to begin
+             *     with. Empty when the forge didn't say. Always present.
+             */
+            headSha: string;
+            /**
+             * @description What sort of pull request this is, decided by the server so no
+             *     client keeps its own copy of the rule. `release`: release-please's,
+             *     by its `autorelease:` label (a person opens these, so the label is
+             *     the only signal, and it wins over any bot author). `dependency`:
+             *     opened by Dependabot or Renovate, in either spelling of the login
+             *     (the bare slug GraphQL gives, or REST's `[bot]` form), on either
+             *     forge. `regular`: everything else. Always present.
+             * @enum {string}
+             */
+            kind: "release" | "dependency" | "regular";
+            /**
+             * @description The branch the pull request targets. Empty when the forge didn't
+             *     say.
+             */
+            baseBranch: string;
+            /**
+             * @description The branch the pull request comes from. Empty when the forge
+             *     didn't say.
+             */
+            headBranch: string;
+            /**
+             * @description True when the head branch lives in another repository (a fork).
+             *     A fork pull request is never part of a stack.
+             */
+            crossRepository: boolean;
+            /**
+             * @description Where this pull request sits in a stack of pull requests, or
+             *     null when it is in none. A stack is worked out on the server:
+             *     pull request B is stacked on A when B's base branch is A's head
+             *     branch, in the same repository on the same forge, and neither is
+             *     a fork. A branch with several open pull requests takes the one
+             *     with the lowest number as parent, and a loop of branches is
+             *     treated as no stack. The snapshot holds open pull requests
+             *     only, so a base branch that no open pull request owns (a parent
+             *     that already merged and was not retargeted) is not flagged.
+             */
+            stack: null | components["schemas"]["StackPosition"];
+            /**
+             * @description The open pull request this one is stacked on, or null when its
+             *     base is not another open pull request's head.
+             */
+            stackedOn: null | components["schemas"]["StackRef"];
+            /**
+             * @description The numbers of the open pull requests stacked directly on this
+             *     one. Always a list, empty when none.
+             */
+            stackChildren: number[];
+            /**
+             * @description A Dependabot or Renovate rebase asked for through this app and not
+             *     settled yet, or null. The server keeps it, so a reload during the
+             *     wait still shows it, and moves it along on every snapshot that
+             *     came from a fetch started after the request. Held in memory per
+             *     account: a server restart forgets it.
+             */
+            botRequest?: null | components["schemas"]["BotRequest"];
+            /**
+             * @description An Update branch the forge accepted and that no snapshot has shown
+             *     landing yet, or null. The server keeps it, so a reload during the
+             *     wait still shows it. It is dropped once a snapshot from a fetch
+             *     started after the request shows the pull request no longer
+             *     behind, or when the pull request is gone. Held in memory per
+             *     account: a server restart forgets it.
+             */
+            updateRequest?: null | components["schemas"]["UpdateRequest"];
+            /**
+             * @description The logins of the users asked to review this pull request, on
+             *     both forges. A team request has no login and is left out.
+             *     Always present, and empty when nobody was asked. Costs no
+             *     extra request: GitHub returns it with the reviewRequests count
+             *     already queried, Forgejo with the pull request itself.
+             */
+            requestedReviewerLogins: string[];
+            /**
+             * @description True when this open, non-draft pull request asks the signed-in
+             *     user to review it, matched without regard to case against the
+             *     username saved in Settings for its forge. False when no
+             *     username is saved for that forge. Always present.
+             */
+            reviewRequestedFromMe: boolean;
+            /**
              * @description Whether merging this pull request would produce an empty
              *     commit — its content already landed on the base branch some
              *     other way. False whenever this service can't tell (the
@@ -1676,6 +2037,113 @@ export interface components {
              */
             autoMergeAllowed?: boolean;
             review?: components["schemas"]["ReviewState"];
+            /**
+             * @description The actions this pull request offers, worked out on the server
+             *     from its own fields, so a client needs no copy of the rules. An
+             *     action that doesn't apply (Update branch on a pull request that
+             *     isn't behind, a Dependabot command on a Renovate pull request)
+             *     is absent, not listed as blocked. Always present; `close` is
+             *     always in it. Live state is the client's: a rate-limited or
+             *     unreachable forge, a missing token and an action already in
+             *     flight can still stop an offered action.
+             */
+            allowedActions: components["schemas"]["AllowedAction"][];
+            /**
+             * @description True when the pull request is mergeable, its CI is green and it
+             *     isn't a draft: what the Ready quick filter lists. Always
+             *     present. A pull request with no checks isn't ready.
+             */
+            readyToMerge: boolean;
+            /**
+             * @description True when a review is outstanding: the forge requires one, or a
+             *     reviewer was asked and hasn't answered, and the pull request
+             *     isn't a draft. Unreviewed with nobody asked, approved, changes
+             *     requested and an unknown review state are all false. Always
+             *     present.
+             */
+            needsReview: boolean;
+        };
+        BotRequest: {
+            /** @enum {string} */
+            bot: "dependabot" | "renovate";
+            /**
+             * @description `recreate` is Dependabot's only. Renovate's rebase label is
+             *     reported as `rebase`.
+             * @enum {string}
+             */
+            action: "rebase" | "recreate";
+            /**
+             * @description `queued`: asked, and nothing seen yet. `rebasing`: the bot
+             *     pushed (the head changed, or the pull request was behind and
+             *     isn't), and CI hasn't restarted yet. `expired`: the bot didn't
+             *     act within 5 minutes. An expired request stays until the pull
+             *     request is gone, a new request replaces it, or an hour passes.
+             *     A request is dropped once CI shows pending after the push, 2
+             *     minutes into `rebasing`, or when the pull request is gone.
+             * @enum {string}
+             */
+            phase: "queued" | "rebasing" | "expired";
+            /** Format: date-time */
+            requestedAt: string;
+            /**
+             * Format: date-time
+             * @description When the server stops waiting in the current phase: 5 minutes
+             *     after the request while `queued`, 2 minutes after the pickup
+             *     while `rebasing`.
+             */
+            expiresAt: string;
+        };
+        UpdateRequest: {
+            /**
+             * @description `queued`: accepted, and the pull request is still behind.
+             *     `expired`: still behind after 5 minutes. An expired request stays
+             *     until the pull request is gone, a new request replaces it, or an
+             *     hour passes.
+             * @enum {string}
+             */
+            phase: "queued" | "expired";
+            /** Format: date-time */
+            requestedAt: string;
+            /**
+             * Format: date-time
+             * @description When the server stops waiting in the current phase: 5 minutes
+             *     after the request while `queued`.
+             */
+            expiresAt: string;
+        };
+        StackPosition: {
+            /**
+             * @description 1 for the pull request at the bottom of the stack (the one
+             *     targeting a branch no open pull request owns), 2 for one
+             *     stacked directly on it, and so on.
+             */
+            position: number;
+            /** @description How many open pull requests the stack holds. */
+            size: number;
+        };
+        StackRef: {
+            number: number;
+            /** Format: uri */
+            url: string;
+        };
+        AllowedAction: {
+            /** @enum {string} */
+            action: "merge" | "close" | "update_branch" | "auto_merge" | "dependabot_rebase" | "dependabot_recreate" | "renovate_rebase" | "rerun_checks";
+            /**
+             * @description Present when the action is offered but can't be taken yet. Merge
+             *     is never hidden for an open pull request, only blocked.
+             */
+            blocked?: {
+                /**
+                 * @description The same codes as `ActionError.code`.
+                 * @enum {string}
+                 */
+                code: "already_up_to_date" | "conflict" | "not_mergeable" | "checks_pending" | "checks_failing" | "behind" | "blocked_by_protection" | "stacked";
+                /** @description Plain words, safe to show a person. */
+                message: string;
+                /** @description What unlocks it, when something does. */
+                next?: string;
+            };
         };
         /**
          * @description Where a pull request stands on code review. The whole object is
@@ -1721,6 +2189,13 @@ export interface components {
              * @description The real issue URL on its own forge.
              */
             url: string;
+            /**
+             * @description True for an issue a bot keeps open and rewrites, Renovate's
+             *     "Dependency Dashboard", which is not work for a person. The
+             *     server decides, so every client lists and counts the same
+             *     issues. It stays in `issues`; `openIssueCount` leaves it out.
+             */
+            housekeeping: boolean;
             author: string;
             labels: components["schemas"]["Label"][];
             /** Format: date-time */
@@ -1730,10 +2205,23 @@ export interface components {
         };
         Dashboard: {
             /**
+             * @description How many of `issues` are real work: all of them except the
+             *     `housekeeping` ones. What the Issues badge shows.
+             */
+            openIssueCount: number;
+            /**
              * Format: date-time
              * @description When this snapshot was refreshed, not when it was requested.
              */
             generatedAt: string;
+            /**
+             * @description How many draft pull requests `pullRequests` leaves out. Always
+             *     present, and `0` when the request set `includeDrafts=true`, so
+             *     a client can render "N hidden" without a special case. Drafts
+             *     in a repo the account ignores aren't counted, since none of
+             *     that repo's pull requests show.
+             */
+            hiddenDrafts: number;
             forges: components["schemas"]["ForgeHealth"][];
             pullRequests: components["schemas"]["PullRequest"][];
             issues: components["schemas"]["Issue"][];
@@ -1815,6 +2303,14 @@ export interface components {
         PathUsername: string;
         PathWebhookToken: string;
         PathTokenID: string;
+        /**
+         * @description Whether draft pull requests are in `pullRequests`. Defaults to
+         *     `false`: nothing can be merged, auto-merged or updated on a draft,
+         *     so a draft is left out and counted in the response's `hiddenDrafts`
+         *     instead. The stream and the refresh endpoint take the same
+         *     parameter, so every snapshot a client receives follows one rule.
+         */
+        QueryIncludeDrafts: boolean;
         /** @description Narrow to entries against this forge only. Omitted matches every forge. */
         QueryRequestLogForge: components["schemas"]["Forge"];
         /**
@@ -2362,6 +2858,77 @@ export interface operations {
             };
         };
     };
+    getTimezone: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The current value. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TimezoneResponse"];
+                };
+            };
+            /** @description No valid session cookie was presented. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
+    setTimezone: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TimezoneRequest"];
+            };
+        };
+        responses: {
+            /** @description The saved value. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TimezoneResponse"];
+                };
+            };
+            /** @description timezone wasn't empty or an IANA zone name. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description No valid session cookie was presented. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
     getFilterState: {
         parameters: {
             query?: never;
@@ -2382,6 +2949,15 @@ export interface operations {
             };
             /** @description No valid session cookie was presented. */
             401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description A personal API token was presented. This endpoint is for a browser session. */
+            403: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -2422,6 +2998,15 @@ export interface operations {
             };
             /** @description No valid session cookie was presented. */
             401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description A personal API token was presented. This endpoint is for a browser session. */
+            403: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -2582,7 +3167,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Error"];
+                    "application/json": components["schemas"]["ActionError"];
                 };
             };
             /** @description The forge reported the repo itself doesn't exist (or isn't visible to this token). */
@@ -2591,7 +3176,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Error"];
+                    "application/json": components["schemas"]["ActionError"];
                 };
             };
             /** @description The forge rate-limited the request. */
@@ -2600,7 +3185,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Error"];
+                    "application/json": components["schemas"]["ActionError"];
                 };
             };
             /** @description The forge was unreachable, or answered with something this app couldn't classify more specifically. */
@@ -2609,7 +3194,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Error"];
+                    "application/json": components["schemas"]["ActionError"];
                 };
             };
         };
@@ -2839,10 +3424,15 @@ export interface operations {
                 };
             };
             /**
-             * @description The forge refused the merge and the pull request's current
-             *     state says why. `code` is one of `already_merged`,
-             *     `already_closed`, `not_mergeable`, `conflict`, `behind`,
-             *     `checks_pending`, `checks_failing` or `blocked_by_protection`.
+             * @description The merge was refused, by this server or by the forge, and the
+             *     pull request's state says why. When the pull request is on the
+             *     signed-in user's board and its `allowedActions` entry for
+             *     `merge` is blocked, this server answers with that entry's `code`
+             *     and `message` and never asks the forge. Otherwise the forge
+             *     refused and the re-read says why. `code` is one of
+             *     `already_merged`, `already_closed`, `not_mergeable`, `conflict`,
+             *     `behind`, `checks_pending`, `checks_failing`,
+             *     `blocked_by_protection` or `stacked`.
              */
             409: {
                 headers: {
@@ -2921,25 +3511,25 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Error"];
+                    "application/json": components["schemas"]["ActionError"];
                 };
             };
-            /** @description The forge reported the repo or pull request doesn't exist (or isn't visible to this token). */
+            /** @description The forge reported the repo or pull request doesn't exist (or isn't visible to this token). `code` is `unknown`. */
             404: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Error"];
+                    "application/json": components["schemas"]["ActionError"];
                 };
             };
-            /** @description The forge rate-limited the request. */
+            /** @description The forge rate-limited the request. `code` is `rate_limited`; `resetsAt` carries when the budget comes back, when the forge said. */
             429: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Error"];
+                    "application/json": components["schemas"]["ActionError"];
                 };
             };
             /** @description The forge was unreachable, or answered with something this app couldn't classify more specifically — including the repo rejecting auto-merge for a reason this app has no more specific status for. */
@@ -2948,7 +3538,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Error"];
+                    "application/json": components["schemas"]["ActionError"];
                 };
             };
         };
@@ -3002,25 +3592,25 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Error"];
+                    "application/json": components["schemas"]["ActionError"];
                 };
             };
-            /** @description The forge reported the repo or pull request doesn't exist (or isn't visible to this token). */
+            /** @description The forge reported the repo or pull request doesn't exist (or isn't visible to this token). `code` is `unknown`. */
             404: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Error"];
+                    "application/json": components["schemas"]["ActionError"];
                 };
             };
-            /** @description The forge rate-limited the request. */
+            /** @description The forge rate-limited the request. `code` is `rate_limited`; `resetsAt` carries when the budget comes back, when the forge said. */
             429: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Error"];
+                    "application/json": components["schemas"]["ActionError"];
                 };
             };
             /** @description The forge was unreachable, or answered with something this app couldn't classify more specifically. */
@@ -3029,7 +3619,96 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
+                    "application/json": components["schemas"]["ActionError"];
+                };
+            };
+        };
+    };
+    rerunPullRequestChecks: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PullRequestActionRequest"];
+            };
+        };
+        responses: {
+            /** @description The failed jobs were queued to rerun. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /**
+             * @description The request body wasn't valid JSON, `fullName` wasn't
+             *     "owner/repo", no credentials are saved for that forge, or that
+             *     forge's client doesn't support rerunning checks.
+             */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
                     "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description No valid session cookie was presented. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description The forge rejected the request as unauthorized. The saved token can't write to Actions on that repo. `code` is `permission`. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ActionError"];
+                };
+            };
+            /** @description The forge reported the repo or pull request doesn't exist (or isn't visible to this token). `code` is `unknown`. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ActionError"];
+                };
+            };
+            /** @description There is no failed Actions job to rerun ("no failed job to rerun"), or the pull request was already merged or closed. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ActionError"];
+                };
+            };
+            /** @description The forge rate-limited the request. `code` is `rate_limited`; `resetsAt` carries when the budget comes back, when the forge said. */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ActionError"];
+                };
+            };
+            /** @description The forge was unreachable, or answered with something this app couldn't classify more specifically. */
+            502: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ActionError"];
                 };
             };
         };
@@ -3090,34 +3769,44 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Error"];
+                    "application/json": components["schemas"]["ActionError"];
                 };
             };
-            /** @description The forge reported the repo or pull request doesn't exist (or isn't visible to this token). */
+            /** @description The forge reported the repo or pull request doesn't exist (or isn't visible to this token). `code` is `unknown`. */
             404: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Error"];
+                    "application/json": components["schemas"]["ActionError"];
                 };
             };
-            /** @description The forge rejected the update because the branches can't be merged cleanly — a real conflict updating would need to resolve by hand. */
+            /**
+             * @description The update was refused. When the pull request is on the
+             *     signed-in user's board and its `allowedActions` has no
+             *     `update_branch` entry, or a blocked one, this server answers
+             *     without asking the forge: the blocked entry's `code` and
+             *     `message`, or `already_up_to_date` for a pull request that is not
+             *     behind, or `not_mergeable` for one that updates through its
+             *     bot's own rebase. Otherwise the forge rejected the update
+             *     because the branches can't be merged cleanly: a real conflict
+             *     updating would need to resolve by hand.
+             */
             409: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Error"];
+                    "application/json": components["schemas"]["ActionError"];
                 };
             };
-            /** @description The forge rate-limited the request. */
+            /** @description The forge rate-limited the request. `code` is `rate_limited`; `resetsAt` carries when the budget comes back, when the forge said. */
             429: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Error"];
+                    "application/json": components["schemas"]["ActionError"];
                 };
             };
             /** @description The forge was unreachable, or answered with something this app couldn't classify more specifically. */
@@ -3126,7 +3815,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Error"];
+                    "application/json": components["schemas"]["ActionError"];
                 };
             };
         };
@@ -3144,7 +3833,10 @@ export interface operations {
             };
         };
         responses: {
-            /** @description Comment posted. */
+            /**
+             * @description Comment posted. The request is recorded as `botRequest` on the
+             *     pull request in the next snapshot.
+             */
             204: {
                 headers: {
                     [name: string]: unknown;
@@ -3180,16 +3872,16 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Error"];
+                    "application/json": components["schemas"]["ActionError"];
                 };
             };
-            /** @description The forge reported the repo or pull request doesn't exist (or isn't visible to this token). */
+            /** @description The forge reported the repo or pull request doesn't exist (or isn't visible to this token). `code` is `unknown`. */
             404: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Error"];
+                    "application/json": components["schemas"]["ActionError"];
                 };
             };
             /**
@@ -3198,23 +3890,27 @@ export interface operations {
              *     the connected GitHub credential is an App with no personal
              *     access token saved, and Dependabot ignores App accounts. The
              *     error text is ForgeHealth.dependabotCommandsBlocked in the
-             *     second case. Nothing was posted.
+             *     second case. A third case: the pull request is on the
+             *     signed-in user's board and its `allowedActions` has no
+             *     `dependabot_rebase` or `dependabot_recreate` entry (it isn't a
+             *     Dependabot pull request on GitHub), so this server refuses with
+             *     `not_mergeable` and never asks the forge. Nothing was posted.
              */
             409: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Error"];
+                    "application/json": components["schemas"]["ActionError"];
                 };
             };
-            /** @description The forge rate-limited the request. */
+            /** @description The forge rate-limited the request. `code` is `rate_limited`; `resetsAt` carries when the budget comes back, when the forge said. */
             429: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Error"];
+                    "application/json": components["schemas"]["ActionError"];
                 };
             };
             /** @description The forge was unreachable, or answered with something this app couldn't classify more specifically. */
@@ -3223,7 +3919,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Error"];
+                    "application/json": components["schemas"]["ActionError"];
                 };
             };
         };
@@ -3241,7 +3937,10 @@ export interface operations {
             };
         };
         responses: {
-            /** @description Label added. */
+            /**
+             * @description Label added. The request is recorded as `botRequest` on the pull
+             *     request in the next snapshot.
+             */
             204: {
                 headers: {
                     [name: string]: unknown;
@@ -3277,7 +3976,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Error"];
+                    "application/json": components["schemas"]["ActionError"];
                 };
             };
             /** @description The forge reported the repo or pull request doesn't exist, or (Forgejo only) the configured label doesn't exist on that repo — Forgejo's labels API takes an existing label's ID, not an arbitrary name, so it has to already be there. */
@@ -3286,16 +3985,31 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Error"];
+                    "application/json": components["schemas"]["ActionError"];
                 };
             };
-            /** @description The forge rate-limited the request. */
+            /**
+             * @description The pull request is on the signed-in user's board and its
+             *     `allowedActions` has no `renovate_rebase` entry (it isn't a
+             *     Renovate pull request), so this server refuses with
+             *     `not_mergeable` and never asks the forge. The label was not
+             *     added.
+             */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ActionError"];
+                };
+            };
+            /** @description The forge rate-limited the request. `code` is `rate_limited`; `resetsAt` carries when the budget comes back, when the forge said. */
             429: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Error"];
+                    "application/json": components["schemas"]["ActionError"];
                 };
             };
             /** @description The forge was unreachable, or answered with something this app couldn't classify more specifically. */
@@ -3304,7 +4018,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Error"];
+                    "application/json": components["schemas"]["ActionError"];
                 };
             };
         };
@@ -3791,7 +4505,12 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description The server can serve. */
+            /**
+             * @description The server can serve. The body also says how many goroutines and
+             *     OS threads the process holds. The container's pids limit counts
+             *     threads, so a climb here shows before the healthcheck can no
+             *     longer start.
+             */
             200: {
                 headers: {
                     [name: string]: unknown;
@@ -3799,15 +4518,18 @@ export interface operations {
                 content: {
                     /**
                      * @example {
-                     *       "status": "ok"
+                     *       "status": "ok",
+                     *       "goroutines": 42,
+                     *       "threads": 14
                      *     }
                      */
-                    "application/json": components["schemas"]["Health"];
+                    "application/json": components["schemas"]["Ready"];
                 };
             };
             /**
-             * @description Not ready yet, or the database is failing. The body carries a
-             *     short reason only: no paths, no driver errors, no secrets.
+             * @description Not ready yet, the database is failing or slow, or the server is
+             *     shutting down. The body carries a short reason only: no paths, no
+             *     driver errors, no secrets.
              */
             503: {
                 headers: {
@@ -3879,6 +4601,14 @@ export interface operations {
             query?: {
                 /** @description A username that has shared their dashboard with the caller. Defaults to the caller's own. */
                 owner?: string;
+                /**
+                 * @description Whether draft pull requests are in `pullRequests`. Defaults to
+                 *     `false`: nothing can be merged, auto-merged or updated on a draft,
+                 *     so a draft is left out and counted in the response's `hiddenDrafts`
+                 *     instead. The stream and the refresh endpoint take the same
+                 *     parameter, so every snapshot a client receives follows one rule.
+                 */
+                includeDrafts?: components["parameters"]["QueryIncludeDrafts"];
             };
             header?: never;
             path?: never;
@@ -3926,7 +4656,16 @@ export interface operations {
     };
     streamDashboard: {
         parameters: {
-            query?: never;
+            query?: {
+                /**
+                 * @description Whether draft pull requests are in `pullRequests`. Defaults to
+                 *     `false`: nothing can be merged, auto-merged or updated on a draft,
+                 *     so a draft is left out and counted in the response's `hiddenDrafts`
+                 *     instead. The stream and the refresh endpoint take the same
+                 *     parameter, so every snapshot a client receives follows one rule.
+                 */
+                includeDrafts?: components["parameters"]["QueryIncludeDrafts"];
+            };
             header?: never;
             path?: never;
             cookie?: never;
@@ -3968,7 +4707,16 @@ export interface operations {
     };
     refreshDashboard: {
         parameters: {
-            query?: never;
+            query?: {
+                /**
+                 * @description Whether draft pull requests are in `pullRequests`. Defaults to
+                 *     `false`: nothing can be merged, auto-merged or updated on a draft,
+                 *     so a draft is left out and counted in the response's `hiddenDrafts`
+                 *     instead. The stream and the refresh endpoint take the same
+                 *     parameter, so every snapshot a client receives follows one rule.
+                 */
+                includeDrafts?: components["parameters"]["QueryIncludeDrafts"];
+            };
             header?: never;
             path?: never;
             cookie?: never;
