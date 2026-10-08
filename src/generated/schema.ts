@@ -1595,6 +1595,16 @@ export interface components {
              */
             renovateRebaseLabel: string;
             /**
+             * @description The logins that are Renovate on the user's forges. On GitHub the
+             *     App's own `renovate` and `renovate[bot]` are always recognised.
+             *     A Forgejo or GitLab instance has no App: Renovate runs there as
+             *     an ordinary account with whatever name the instance gave it, so
+             *     the user lists it here. A pull request by one of these gets
+             *     Renovate's own rebase, not Update branch, and is a `dependency`.
+             *     Matched case-insensitively. Empty means only the GitHub slugs.
+             */
+            renovateAuthors: string[];
+            /**
              * @description The signed-in user's own theme preference. Empty
              *     means "system" — follow the browser's prefers-color-scheme
              *     rather than a saved choice. Set only from Settings; every
@@ -1643,6 +1653,11 @@ export interface components {
             forgejoToken?: string;
             forgejoUsername?: string;
             renovateRebaseLabel?: string;
+            /**
+             * @description Replaces the saved list. Entries are trimmed; blanks and
+             *     repeats (ignoring case) are dropped. Omitted or empty clears it.
+             */
+            renovateAuthors?: string[];
         };
         /** @description See GET /api/settings/theme's own description. */
         ThemeResponse: {
