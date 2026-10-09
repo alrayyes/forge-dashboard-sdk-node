@@ -2162,7 +2162,7 @@ export interface components {
              * @description `queued`: asked, and nothing seen yet. `rebasing`: the bot
              *     pushed (the head changed, or the pull request was behind and
              *     isn't), and CI hasn't restarted yet. `expired`: the bot didn't
-             *     act within 5 minutes. An expired request stays until the pull
+             *     act within 10 minutes. An expired request stays until the pull
              *     request is gone, a new request replaces it, or an hour passes.
              *     A request is dropped once CI shows pending after the push, 2
              *     minutes into `rebasing`, or when the pull request is gone.
@@ -2173,11 +2173,27 @@ export interface components {
             requestedAt: string;
             /**
              * Format: date-time
-             * @description When the server stops waiting in the current phase: 5 minutes
-             *     after the request while `queued`, 2 minutes after the pickup
-             *     while `rebasing`.
+             * @description When the server stops waiting in the current phase: 10 minutes
+             *     after the request while `queued` (10 minutes after
+             *     `acknowledgedAt` once Dependabot has acknowledged), 2 minutes
+             *     after the pickup while `rebasing`.
              */
             expiresAt: string;
+            /**
+             * Format: date-time
+             * @description When the server first saw Dependabot's thumbs-up on the
+             *     `@dependabot rebase` comment, which is how Dependabot says it
+             *     received the command. Absent until then, and always absent for
+             *     Renovate and for `recreate`. A thumbs-up that arrives after the
+             *     request expired moves it back to `queued`.
+             */
+            acknowledgedAt?: string;
+            /**
+             * Format: uri
+             * @description The command comment on GitHub, once the server has found it.
+             *     Absent before that, and for Renovate.
+             */
+            commentUrl?: string;
         };
         UpdateRequest: {
             /**
