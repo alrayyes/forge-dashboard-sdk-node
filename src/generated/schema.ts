@@ -2238,18 +2238,24 @@ export interface components {
             url: string;
         };
         AllowedAction: {
-            /** @enum {string} */
-            action: "merge" | "close" | "update_branch" | "auto_merge" | "cancel_auto_merge" | "dependabot_rebase" | "dependabot_recreate" | "renovate_rebase" | "rerun_checks";
+            /**
+             * @description One of the values below today, and the server may learn more.
+             *     A client should treat a value it doesn't know as an action it
+             *     can't offer, not as an error. Declared with `x-extensible-enum`
+             *     so adding a value is a minor SDK release.
+             */
+            action: string;
             /**
              * @description Present when the action is offered but can't be taken yet. Merge
              *     is never hidden for an open pull request, only blocked.
              */
             blocked?: {
                 /**
-                 * @description The same codes as `ActionError.code`.
-                 * @enum {string}
+                 * @description The same codes as `ActionError.code`. The server may learn
+                 *     more, so a client should show `message` for a code it doesn't
+                 *     know. Declared with `x-extensible-enum`.
                  */
-                code: "already_up_to_date" | "conflict" | "not_mergeable" | "checks_pending" | "checks_failing" | "behind" | "blocked_by_protection" | "stacked";
+                code: string;
                 /** @description Plain words, safe to show a person. */
                 message: string;
                 /** @description What unlocks it, when something does. */
