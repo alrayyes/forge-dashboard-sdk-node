@@ -1187,6 +1187,15 @@ export interface paths {
          *     a user with shared access to someone else's dashboard can never
          *     spend that owner's own forge rate-limit budget on their own
          *     schedule.
+         *
+         *     The server holds a five-second cooldown per user, so this can't
+         *     be used to hammer a forge's API budget. A call inside that
+         *     window does not fetch: it answers 200 with the current snapshot
+         *     and a `Retry-After` header carrying the seconds left. Never a
+         *     429, because the page calls this straight after a merge, close
+         *     or branch update to show the result, and a refusal there would
+         *     leave the row stale. Only a call that actually fetched answers
+         *     without the header.
          */
         post: operations["refreshDashboard"];
         delete?: never;
@@ -2324,6 +2333,13 @@ export interface components {
              * @description When this snapshot was refreshed, not when it was requested.
              */
             generatedAt: string;
+            /**
+             * @description How often, in seconds, a client should re-read GET
+             *     /api/dashboard. The server's advice, so a client needs no
+             *     interval of its own. The read is cheap and never calls a
+             *     forge; this is not the backend's refresh schedule.
+             */
+            readIntervalSeconds: number;
             /**
              * @description How many draft pull requests `pullRequests` leaves out. Always
              *     present, and `0` when the request set `includeDrafts=true`, so
@@ -4876,9 +4892,18 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description The freshly refreshed snapshot. */
+            /**
+             * @description The freshly refreshed snapshot, or, when `Retry-After` is
+             *     present, the current one because the cooldown hadn't passed.
+             */
             200: {
                 headers: {
+                    /**
+                     * @description Seconds until a refresh fetches again. Present only when
+                     *     this call was inside the cooldown and returned the current
+                     *     snapshot without fetching.
+                     */
+                    "Retry-After"?: number;
                     [name: string]: unknown;
                 };
                 content: {
