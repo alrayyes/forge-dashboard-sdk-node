@@ -1281,6 +1281,47 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/main-branches": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The CI status of every tracked repository's default branch
+         * @description One row per tracked repository, showing the latest pipeline on its
+         *     default branch: failed, passed, running or none (#1224). Every row is
+         *     returned, whatever its status, with a count per status, so a client
+         *     filters and sorts locally and its pill counts always match what each
+         *     pill lists. Rows come failed first, then running, passed and none,
+         *     each group by `fullName`.
+         *
+         *     Served from the snapshot the background refresh already holds, so it
+         *     never calls a forge. On GitHub the branch's check status rides the
+         *     repository query the refresh already makes (no extra request); on
+         *     Forgejo the refresh lists the Actions runs of the default branch, once
+         *     per repository.
+         *
+         *     A forge that can't be reached keeps its last known rows, each marked
+         *     `stale` with `staleSince`, the same carry-over `forges[].staleSince`
+         *     on GET /api/dashboard reports. A forge whose rate-limit budget is
+         *     spent is skipped until it resets and its rows are kept the same way.
+         *     Only the signed-in user's own repositories, so there is no `owner`.
+         *
+         *     A repository with no default branch yet (empty) or no pipeline has
+         *     status `none`. Unauthenticated GitHub access (a username with no
+         *     token) has no rows: its budget is too small to spend on this.
+         */
+        get: operations["getMainBranches"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/sharing": {
         parameters: {
             query?: never;
@@ -2518,6 +2559,98 @@ export interface components {
             pullRequests: components["schemas"]["PullRequest"][];
             issues: components["schemas"]["Issue"][];
             repos: components["schemas"]["RepoStatus"][];
+        };
+        /**
+         * @description The result of the latest pipeline on a default branch's newest
+         *     commit, across all its workflows. "failed" when any job failed,
+         *     "running" when none failed and some are still queued or running,
+         *     "passed" when all finished green, "none" when the commit has no
+         *     pipeline at all (or the repository has no commit yet).
+         * @enum {string}
+         */
+        MainBranchStatus: "failed" | "passed" | "running" | "none";
+        /** @description The newest commit on the default branch. */
+        MainBranchCommit: {
+            /** @description The commit id, shortened to seven characters. */
+            sha: string;
+            /** @description The first line of the commit message. */
+            subject: string;
+            /**
+             * @description The commit author's login where the forge knows it, else the name
+             *     on the commit. Empty when the forge didn't say.
+             */
+            author: string;
+            /**
+             * Format: date-time
+             * @description When the commit was made, or null when the forge didn't say.
+             */
+            committedAt: string | null;
+        };
+        /** @description One tracked repository and the CI status of its default branch. */
+        MainBranch: {
+            forge: components["schemas"]["Forge"];
+            /** @description "owner/repo", matching a Repo.fullName from GET /api/dashboard. */
+            fullName: string;
+            /** @description The repository's own page on its forge. */
+            url: string;
+            /** @description The repository's default branch. Empty for a repository the forge reports no default branch for. */
+            branch: string;
+            status: components["schemas"]["MainBranchStatus"];
+            /** @description The newest commit, or null when the forge reported none (an empty repository, or no run on Forgejo to name one from). */
+            commit: components["schemas"]["MainBranchCommit"] | null;
+            /**
+             * @description The names of the failed jobs (GitHub checks, Forgejo Actions
+             *     jobs), or of the failed workflow when its jobs couldn't be read.
+             *     Always present and empty unless `status` is "failed".
+             */
+            failingJobs: string[];
+            /**
+             * Format: date-time
+             * @description When the pipeline's last job finished. Null while it runs, or when the forge didn't say.
+             */
+            finishedAt: string | null;
+            /**
+             * @description How long the pipeline ran, from its first job starting to its last
+             *     finishing. Null while it runs, or when the forge didn't say.
+             */
+            durationSeconds: number | null;
+            /**
+             * @description Where to see the run on the forge: the failed job's page for a
+             *     failed pipeline, else the run's, else the commit's. Falls back to
+             *     the repository's `url`.
+             */
+            runUrl: string;
+            /**
+             * @description True when this row is the last known one because its forge
+             *     couldn't be read or its rate limit is spent. A client offers no
+             *     write on a stale row (#1199).
+             */
+            stale: boolean;
+            /**
+             * Format: date-time
+             * @description When this row was last fetched. Null unless `stale`.
+             */
+            staleSince: string | null;
+        };
+        /**
+         * @description How many rows are in each status, the numbers on the filter pills.
+         *     `total` is every row, so it equals the sum of the other four.
+         */
+        MainBranchCounts: {
+            failed: number;
+            passed: number;
+            running: number;
+            none: number;
+            total: number;
+        };
+        MainBranches: {
+            /**
+             * Format: date-time
+             * @description When the snapshot was refreshed, not when it was requested.
+             */
+            generatedAt: string;
+            counts: components["schemas"]["MainBranchCounts"];
+            branches: components["schemas"]["MainBranch"][];
         };
         /**
          * @description One tracked repository, whether or not it currently has anything
@@ -5236,6 +5369,35 @@ export interface operations {
             };
             /** @description No background refresh is running yet for this user — Settings has never been saved. */
             404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
+    getMainBranches: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The default-branch status of every tracked repository. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MainBranches"];
+                };
+            };
+            /** @description No valid session cookie was presented. */
+            401: {
                 headers: {
                     [name: string]: unknown;
                 };
