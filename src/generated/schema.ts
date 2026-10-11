@@ -2477,12 +2477,10 @@ export interface components {
              * @description The signed-in user's queued actions, waiting and finished in the
              *     last 24 hours (GET /api/queued-actions), so a client lists them in
              *     its Activity panel and learns an outcome from the stream it
-             *     already reads. Empty when there are none, and always empty on
-             *     another user's shared dashboard. Not yet in `required`: the
-             *     handler that fills it ships in the next pull request of the
-             *     stack, which makes it required.
+             *     already reads. Always present, empty when there are none, and
+             *     always empty on another user's shared dashboard.
              */
-            queuedActions?: components["schemas"]["QueuedAction"][];
+            queuedActions: components["schemas"]["QueuedAction"][];
             /**
              * @description Pull requests this app auto-merged in the last ten minutes, newest
              *     first. They have already left `pullRequests`, so this is how a
