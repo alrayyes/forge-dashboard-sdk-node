@@ -638,12 +638,16 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * Cancel the auto-merge this app holds for a pull request
-         * @description Forgejo only: removes the intent stored by
-         *     `POST /api/pull-requests/auto-merge`, so the background pass never
-         *     merges the pull request. Nothing is sent to the forge. Idempotent: a
-         *     pull request with no intent is a 204 too. GitHub's own auto-merge
-         *     isn't cancelled from here, so a GitHub pull request is a 400.
+         * Cancel auto-merge on a pull request, on the signed-in user's behalf
+         * @description Forgejo: removes the intent stored by `POST /api/pull-requests/auto-merge`,
+         *     so the background pass never merges the pull request. Nothing is sent
+         *     to the forge. Idempotent: a pull request with no intent is a 204 too.
+         *
+         *     GitHub: turns the pull request's own auto-merge off with GitHub's
+         *     `disablePullRequestAutoMerge` GraphQL mutation. Only a pull request
+         *     whose `allowedActions` has a `cancel_auto_merge` entry; otherwise this
+         *     server answers 409 itself and never asks GitHub. A refusal from
+         *     GitHub is an `ActionError`, as for arming.
          */
         post: operations["cancelPullRequestAutoMerge"];
         delete?: never;
@@ -1903,10 +1907,10 @@ export interface components {
             issues: boolean;
         };
         /**
-         * @description Where an armed Forgejo pull request stands, so the row can say why
+         * @description Where an armed pull request stands, so the row can say why
          *     auto-merge is waiting or stopped in words and not by colour. Present
-         *     only while the signed-in user has auto-merge armed on it. This app
-         *     holds that intent itself, so GitHub's own auto-merge never has it.
+         *     while auto-merge is armed on it: on Forgejo the signed-in user's
+         *     intent held by this app, on GitHub the forge's own auto-merge (#1293).
          */
         AutoMergeStatus: {
             /**
@@ -3981,7 +3985,7 @@ export interface operations {
             };
         };
         responses: {
-            /** @description No intent is stored for this pull request any more. */
+            /** @description Auto-merge is off for this pull request. */
             204: {
                 headers: {
                     [name: string]: unknown;
@@ -3990,7 +3994,8 @@ export interface operations {
             };
             /**
              * @description The request body wasn't valid JSON, `fullName` wasn't
-             *     "owner/repo", or `forge` isn't `forgejo`.
+             *     "owner/repo", the forge is unknown, no credentials are saved for
+             *     it, or its client can't cancel auto-merge.
              */
             400: {
                 headers: {
@@ -4007,6 +4012,24 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description GitHub only. The pull request has no auto-merge armed, so there is nothing to cancel. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ActionError"];
+                };
+            };
+            /** @description GitHub was unreachable or refused the request. */
+            502: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ActionError"];
                 };
             };
         };
