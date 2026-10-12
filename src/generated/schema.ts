@@ -721,6 +721,59 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/pull-requests/hide": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Hide one pull request from the signed-in user's dashboard
+         * @description Reversible, not destructive, like ignoring a repo: nothing is sent to
+         *     the forge. A hidden pull request leaves `pullRequests` in
+         *     GET /api/dashboard and everything counted from it, and is counted in
+         *     `hiddenPullRequests` instead. It stays listed for
+         *     `includeHidden=true`, marked `hidden`, so a client can offer a Restore.
+         *
+         *     With `days`, the hide ends by itself that many days from now. Without
+         *     it the pull request stays hidden until `POST /api/pull-requests/unhide`.
+         *     A repeat call replaces the earlier choice (hide until restored, then
+         *     hide for 7 days, ends with the 7 days). The server forgets the record
+         *     once the pull request is no longer open, so the list never grows
+         *     without end. The pull request need not be on the board yet: hiding
+         *     one the user can't see is still a 204.
+         */
+        post: operations["hidePullRequest"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/pull-requests/unhide": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Bring a hidden pull request back onto the signed-in user's dashboard
+         * @description The reverse of POST /api/pull-requests/hide. Idempotent: restoring a
+         *     pull request that isn't hidden is a 204 too.
+         */
+        post: operations["unhidePullRequest"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/pull-requests/update-branch": {
         parameters: {
             query?: never;
@@ -1950,6 +2003,19 @@ export interface components {
             /** @description Matching a PullRequest.number from GET /api/dashboard. */
             number: number;
         };
+        /**
+         * @description Which pull request to hide, and for how long. Without `days` it stays
+         *     hidden until it is restored.
+         */
+        PullRequestHideRequest: {
+            forge: components["schemas"]["Forge"];
+            /** @description "owner/repo", matching a Repo.fullName from GET /api/dashboard. */
+            fullName: string;
+            /** @description Matching a PullRequest.number from GET /api/dashboard. */
+            number: number;
+            /** @description Hide for this many days, then show it again on its own. */
+            days?: number;
+        };
         /** @description Which pull request to act on, and which of Dependabot's own comment commands to send. */
         PullRequestDependabotActionRequest: {
             forge: components["schemas"]["Forge"];
@@ -2279,6 +2345,18 @@ export interface components {
             allowedActions: components["schemas"]["AllowedAction"][];
             autoMerge?: components["schemas"]["AutoMergeStatus"];
             /**
+             * @description True on a pull request the user hid. Only present when the request
+             *     set `includeHidden=true`: without it a hidden pull request isn't
+             *     in the list at all.
+             */
+            hidden?: boolean;
+            /**
+             * Format: date-time
+             * @description When a hide for a number of days ends. Absent for a pull request
+             *     hidden until it is restored, and for one that isn't hidden.
+             */
+            hiddenUntil?: string;
+            /**
              * @description True when the pull request is mergeable, its CI is green and it
              *     isn't a draft: what the Ready quick filter lists. Always
              *     present. A pull request with no checks isn't ready.
@@ -2559,6 +2637,13 @@ export interface components {
              *     that repo's pull requests show.
              */
             hiddenDrafts: number;
+            /**
+             * @description How many pull requests the user hid that are still open and not
+             *     expired. Always present, so a client can render "Hidden (N)"
+             *     without a special case. With `includeHidden=true` they are in
+             *     `pullRequests`, marked `hidden`, and this still counts them.
+             */
+            hiddenPullRequests?: number;
             forges: components["schemas"]["ForgeHealth"][];
             pullRequests: components["schemas"]["PullRequest"][];
             issues: components["schemas"]["Issue"][];
@@ -2732,6 +2817,15 @@ export interface components {
         PathUsername: string;
         PathWebhookToken: string;
         PathTokenID: string;
+        /**
+         * @description Whether pull requests the user hid (`POST /api/pull-requests/hide`)
+         *     are in `pullRequests`, marked `hidden: true`. Defaults to `false`: a
+         *     hidden pull request is left out and counted in the response's
+         *     `hiddenPullRequests`. A client lists the hidden ones, to offer a
+         *     Restore, by asking with `true`. The stream and the refresh endpoint
+         *     take the same parameter.
+         */
+        QueryIncludeHidden: boolean;
         /**
          * @description Whether draft pull requests are in `pullRequests`. Defaults to
          *     `false`: nothing can be merged, auto-merged or updated on a draft,
@@ -4204,6 +4298,93 @@ export interface operations {
             };
         };
     };
+    hidePullRequest: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PullRequestHideRequest"];
+            };
+        };
+        responses: {
+            /** @description The pull request is hidden (or already was). */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /**
+             * @description The request body wasn't valid JSON, `fullName` wasn't
+             *     "owner/repo", `number` wasn't positive, or `days` was outside
+             *     1 to 365.
+             */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description No valid session cookie was presented. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
+    unhidePullRequest: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PullRequestActionRequest"];
+            };
+        };
+        responses: {
+            /** @description The pull request is no longer hidden. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /**
+             * @description The request body wasn't valid JSON, `fullName` wasn't
+             *     "owner/repo", or `number` wasn't positive.
+             */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description No valid session cookie was presented. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
     updatePullRequestBranch: {
         parameters: {
             query?: never;
@@ -5249,6 +5430,15 @@ export interface operations {
                  *     parameter, so every snapshot a client receives follows one rule.
                  */
                 includeDrafts?: components["parameters"]["QueryIncludeDrafts"];
+                /**
+                 * @description Whether pull requests the user hid (`POST /api/pull-requests/hide`)
+                 *     are in `pullRequests`, marked `hidden: true`. Defaults to `false`: a
+                 *     hidden pull request is left out and counted in the response's
+                 *     `hiddenPullRequests`. A client lists the hidden ones, to offer a
+                 *     Restore, by asking with `true`. The stream and the refresh endpoint
+                 *     take the same parameter.
+                 */
+                includeHidden?: components["parameters"]["QueryIncludeHidden"];
             };
             header?: never;
             path?: never;
@@ -5305,6 +5495,15 @@ export interface operations {
                  *     parameter, so every snapshot a client receives follows one rule.
                  */
                 includeDrafts?: components["parameters"]["QueryIncludeDrafts"];
+                /**
+                 * @description Whether pull requests the user hid (`POST /api/pull-requests/hide`)
+                 *     are in `pullRequests`, marked `hidden: true`. Defaults to `false`: a
+                 *     hidden pull request is left out and counted in the response's
+                 *     `hiddenPullRequests`. A client lists the hidden ones, to offer a
+                 *     Restore, by asking with `true`. The stream and the refresh endpoint
+                 *     take the same parameter.
+                 */
+                includeHidden?: components["parameters"]["QueryIncludeHidden"];
             };
             header?: never;
             path?: never;
@@ -5356,6 +5555,15 @@ export interface operations {
                  *     parameter, so every snapshot a client receives follows one rule.
                  */
                 includeDrafts?: components["parameters"]["QueryIncludeDrafts"];
+                /**
+                 * @description Whether pull requests the user hid (`POST /api/pull-requests/hide`)
+                 *     are in `pullRequests`, marked `hidden: true`. Defaults to `false`: a
+                 *     hidden pull request is left out and counted in the response's
+                 *     `hiddenPullRequests`. A client lists the hidden ones, to offer a
+                 *     Restore, by asking with `true`. The stream and the refresh endpoint
+                 *     take the same parameter.
+                 */
+                includeHidden?: components["parameters"]["QueryIncludeHidden"];
             };
             header?: never;
             path?: never;
