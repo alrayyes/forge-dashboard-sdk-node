@@ -2595,6 +2595,44 @@ export interface components {
             /** Format: date-time */
             updatedAt: string;
         };
+        NavCount: {
+            /** @description How many items the page lists. */
+            total: number;
+            /**
+             * @description How many of them fail: a pull request whose CI is failing, or a
+             *     default branch whose pipeline is. An item with no pipeline counts
+             *     in `total` only.
+             */
+            failed: number;
+        };
+        NavIssueCount: {
+            /**
+             * @description How many open issues are real work, the same number as
+             *     `openIssueCount`. Issues have no failing state, so there is no
+             *     `failed`.
+             */
+            total: number;
+        };
+        /**
+         * @description The numbers behind the navigation badges (#1315), counted from what the
+         *     board shows by default, so they match each page when it opens. Pull
+         *     requests leave out ignored repos, draft pull requests and hidden pull
+         *     requests whatever `includeDrafts` and `includeHidden` ask for, so the
+         *     badge doesn't jump when a toggle flips; branches counts every tracked
+         *     default branch, as GET /api/main-branches lists them. Pull requests are
+         *     split by `kind`
+         *     (release pull requests under `releases`, Dependabot and Renovate
+         *     under `bots`, the rest under `pullRequests`). Always present, with
+         *     zeros when there is nothing. A client hides a page's whole nav item at
+         *     zero total, and its red failed number at zero failed.
+         */
+        NavCounts: {
+            branches: components["schemas"]["NavCount"];
+            pullRequests: components["schemas"]["NavCount"];
+            issues: components["schemas"]["NavIssueCount"];
+            releases: components["schemas"]["NavCount"];
+            bots: components["schemas"]["NavCount"];
+        };
         Dashboard: {
             /**
              * @description The signed-in user's queued actions, waiting and finished in the
@@ -2617,6 +2655,7 @@ export interface components {
              *     `housekeeping` ones. What the Issues badge shows.
              */
             openIssueCount: number;
+            navCounts: components["schemas"]["NavCounts"];
             /**
              * Format: date-time
              * @description When this snapshot was refreshed, not when it was requested.
