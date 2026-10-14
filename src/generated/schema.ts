@@ -2674,15 +2674,22 @@ export interface components {
             /** Format: date-time */
             updatedAt: string;
         };
+        /**
+         * @description The Branches page's numbers (#1458): how many default branches it
+         *     lists and how many of those have a pipeline running, failed and
+         *     passed, the same four as `NavPullRequestCount`. A branch with no
+         *     pipeline counts in `total` only, so the four numbers need not add up.
+         *     All four are always present.
+         */
         NavCount: {
-            /** @description How many items the page lists. */
+            /** @description How many default branches the page lists. */
             total: number;
-            /**
-             * @description How many of them fail: a pull request whose CI is failing, or a
-             *     default branch whose pipeline is. An item with no pipeline counts
-             *     in `total` only.
-             */
+            /** @description How many of them have a pipeline that is still running. */
+            running: number;
+            /** @description How many of them have a failing pipeline. */
             failed: number;
+            /** @description How many of them have a pipeline that passed. */
+            passed: number;
         };
         /**
          * @description A pull request page's numbers (#1439). `running`, `failed` and
@@ -2720,8 +2727,8 @@ export interface components {
          *     (release pull requests under `releases`, Dependabot and Renovate
          *     under `bots`, the rest under `pullRequests`). Always present, with
          *     zeros when there is nothing. A client hides a page's whole nav item at
-         *     zero total, and a state's number at zero. Pull request pages also carry
-         *     `running` and `passed` (#1439).
+         *     zero total, and a state's number at zero. Every page except Issues also
+         *     carries `running` and `passed` (#1439, #1458).
          */
         NavCounts: {
             branches: components["schemas"]["NavCount"];
