@@ -565,6 +565,11 @@ export interface paths {
          *     pull request that is already merged or closed answers
          *     `already_merged` / `already_closed`. If the re-read itself fails,
          *     the original forge error is returned with `code: unknown`.
+         *
+         *     An empty pull request, whose branch is already on the target, has no
+         *     `merge` in `allowedActions` (#1375). A Merge posted for one anyway
+         *     gets 409 `already_up_to_date` from this server, which never asks the
+         *     forge.
          */
         post: operations["mergePullRequest"];
         delete?: never;
@@ -1539,11 +1544,12 @@ export interface components {
              *     outcome of a queued action: the pull request was gone from the
              *     board when the reset came, merged or closed.
              *
-             *     Three codes belong to one action each: `already_up_to_date`
-             *     (Update branch: nothing to bring in), `auto_merge_not_allowed`
-             *     (Enable auto-merge: the repo or pull request doesn't allow it)
-             *     and `ready_to_merge` (Enable auto-merge: already clean, use
-             *     Merge).
+             *     Three codes belong to a few actions each: `already_up_to_date`
+             *     (Update branch: nothing to bring in; Merge or Enable auto-merge
+             *     on an empty pull request: nothing to merge),
+             *     `auto_merge_not_allowed` (Enable auto-merge: the repo or pull
+             *     request doesn't allow it) and `ready_to_merge` (Enable
+             *     auto-merge: already clean, use Merge).
              * @enum {string}
              */
             code: "already_merged" | "already_closed" | "not_mergeable" | "conflict" | "behind" | "checks_pending" | "checks_failing" | "blocked_by_protection" | "already_up_to_date" | "auto_merge_not_allowed" | "ready_to_merge" | "permission" | "rate_limited" | "not_rate_limited" | "not_open" | "unknown";
@@ -2374,6 +2380,18 @@ export interface components {
              *     flight can still stop an offered action.
              */
             allowedActions: components["schemas"]["AllowedAction"][];
+            /**
+             * @description The one reason this pull request is waiting on something or can't
+             *     be merged, for a fixed place on its row (#1375): a check still
+             *     running, a conflict, a draft, a parent it is stacked on, or, for
+             *     an empty pull request, that there is nothing to merge. `code`,
+             *     `message` and `next` are the same as on `allowedActions[].blocked`,
+             *     and for a pull request that waiting or fixing can unlock they
+             *     repeat Merge's blocked reason. An empty pull request offers no
+             *     `merge` (only `close`), so this is where its reason lives. Null
+             *     when nothing holds the pull request back. Always present.
+             */
+            status: null | components["schemas"]["PullRequestStatus"];
             autoMerge?: components["schemas"]["AutoMergeStatus"];
             /**
              * @description True on a pull request the user hid. Only present when the request
@@ -2553,7 +2571,9 @@ export interface components {
             action: string;
             /**
              * @description Present when the action is offered but can't be taken yet. Merge
-             *     is never hidden for an open pull request, only blocked.
+             *     is blocked rather than hidden while waiting or fixing something can
+             *     unlock it. An empty pull request, which nothing can unlock, has no
+             *     `merge` entry at all (#1375): see `status`.
              *     `renovate_rebase` is blocked with `already_requested` while
              *     Renovate's rebase checkbox in the pull request description is
              *     ticked, whether it was ticked from this app or on the forge: one
@@ -2572,6 +2592,23 @@ export interface components {
                 /** @description What unlocks it, when something does. */
                 next?: string;
             };
+        };
+        /**
+         * @description Why a pull request is waiting on something or can't be merged, in one
+         *     place for a client to show (#1375). Same shape as
+         *     `AllowedAction.blocked`.
+         */
+        PullRequestStatus: {
+            /**
+             * @description The same codes as `AllowedAction.blocked.code`. The server may
+             *     learn more, so a client should show `message` for a code it
+             *     doesn't know. Declared with `x-extensible-enum`.
+             */
+            code: string;
+            /** @description Plain words, safe to show a person. */
+            message: string;
+            /** @description What unlocks it or what to do about it, when there is something. */
+            next?: string;
         };
         /**
          * @description Where a pull request stands on code review. The whole object is
