@@ -2684,6 +2684,22 @@ export interface components {
              */
             failed: number;
         };
+        /**
+         * @description A pull request page's numbers (#1439). `running`, `failed` and
+         *     `passed` count the pull requests whose CI is pending, failing and
+         *     succeeded. A pull request with no checks counts in `total` only, so
+         *     the four numbers need not add up. All four are always present.
+         */
+        NavPullRequestCount: {
+            /** @description How many pull requests the page lists. */
+            total: number;
+            /** @description How many of them have CI that is still pending. */
+            running: number;
+            /** @description How many of them have failing CI. */
+            failed: number;
+            /** @description How many of them have CI that succeeded. */
+            passed: number;
+        };
         NavIssueCount: {
             /**
              * @description How many open issues are real work, the same number as
@@ -2704,14 +2720,15 @@ export interface components {
          *     (release pull requests under `releases`, Dependabot and Renovate
          *     under `bots`, the rest under `pullRequests`). Always present, with
          *     zeros when there is nothing. A client hides a page's whole nav item at
-         *     zero total, and its red failed number at zero failed.
+         *     zero total, and a state's number at zero. Pull request pages also carry
+         *     `running` and `passed` (#1439).
          */
         NavCounts: {
             branches: components["schemas"]["NavCount"];
-            pullRequests: components["schemas"]["NavCount"];
+            pullRequests: components["schemas"]["NavPullRequestCount"];
             issues: components["schemas"]["NavIssueCount"];
-            releases: components["schemas"]["NavCount"];
-            bots: components["schemas"]["NavCount"];
+            releases: components["schemas"]["NavPullRequestCount"];
+            bots: components["schemas"]["NavPullRequestCount"];
         };
         Dashboard: {
             /**
