@@ -2296,6 +2296,17 @@ export interface components {
              */
             requestedReviewerLogins: string[];
             /**
+             * @description True when GitHub is holding a workflow run on the head commit
+             *     until someone approves it (#1280): its rollup counts a check run
+             *     as ACTION_REQUIRED. Those runs also keep `ci` at failure when
+             *     nothing else is running, so a client reads this to say "waiting
+             *     for approval" rather than "check failed". It can be true while
+             *     `ci` is pending (other runs are going) or failing for another
+             *     reason too. Always present; false on Forgejo, which has no
+             *     such state.
+             */
+            awaitingWorkflowApproval: boolean;
+            /**
              * @description How many review comments the pull request has (#1335). Ordinary
              *     conversation comments are not counted. Always present, and 0 when
              *     there are none or the forge can't say (a Forgejo draft or failed
