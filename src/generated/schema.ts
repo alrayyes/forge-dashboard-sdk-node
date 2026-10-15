@@ -911,6 +911,52 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/pull-requests/details": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Read a pull request's description, comments and reactions, on demand
+         * @description What the pull request dialog shows (#1506): the description, the
+         *     conversation in order, the thumbs up and thumbs down reactions on each
+         *     with who gave them, and, for a release pull request, the release
+         *     notes. Fetched live on every call, never as part of GET
+         *     /api/dashboard's snapshot: comments and reactions for every row would
+         *     spend the forge's budget on rows nobody opens.
+         *
+         *     GitHub answers with one GraphQL query. Forgejo costs one call for the
+         *     pull request, one for its comments, one for the description's
+         *     reactions and one for each comment's reactions (up to 50), so the
+         *     reaction calls run at most eight at a time and stop at the first rate
+         *     limit.
+         *
+         *     Every text is Markdown exactly as the forge stores it (`format` is
+         *     always `markdown`). The server neither converts nor sanitises it, so
+         *     a client must render it with raw HTML disabled. Each text is cut at
+         *     20,000 characters (`truncated`), the conversation keeps its first 50
+         *     comments (`commentsTruncated`, with the full `commentCount`), and a
+         *     reaction names at most its first 10 people while `count` is the full
+         *     number. An avatar is the forge's own URL, passed through unchanged
+         *     and never proxied; this app sets no Content-Security-Policy today, so
+         *     the browser loads it directly. A future policy's `img-src` has to
+         *     allow avatars.githubusercontent.com and the Forgejo host.
+         *
+         *     The error answers are those of GET /api/pull-requests/checks, with
+         *     the same codes. A forge that can't be read is an error, never an
+         *     empty thread.
+         */
+        get: operations["getPullRequestDetails"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/queued-actions": {
         parameters: {
             query?: never;
@@ -2095,6 +2141,76 @@ export interface components {
              *     failed check offers.
              */
             excerpt?: string;
+        };
+        /** @description Who wrote a description or a comment. */
+        Person: {
+            login: string;
+            /** @description The forge's own avatar URL, passed through unchanged and never proxied. */
+            avatarUrl: string;
+        };
+        Reaction: {
+            /** @description How many people gave this reaction. */
+            count: number;
+            /** @description The first few of them, at most 10. `count` is the full number. */
+            logins: string[];
+        };
+        /** @description The two reactions the dialog shows, `+1` and `-1` on both forges. */
+        Reactions: {
+            thumbsUp: components["schemas"]["Reaction"];
+            thumbsDown: components["schemas"]["Reaction"];
+        };
+        /** @description A pull request's description, or the release notes of a release pull request. */
+        DetailsBody: {
+            /**
+             * @description The text as the forge stores it, cut at 20,000 characters. Markdown,
+             *     not converted or sanitised: render it with raw HTML disabled.
+             */
+            text: string;
+            /**
+             * @description How `text` is written. Only markdown today; a later format is additive.
+             * @enum {string}
+             */
+            format: "markdown";
+            /** @description True when `text` was cut at 20,000 characters. */
+            truncated: boolean;
+            /** @description True when the forge says the text was edited after it was posted. */
+            edited: boolean;
+            reactions: components["schemas"]["Reactions"];
+        };
+        /** @description One comment on the pull request's conversation. */
+        DetailsComment: {
+            /** @description The forge's own identifier for the comment. */
+            id: string;
+            /** @description Null for a deleted account; a client shows it as "ghost". */
+            author: null | components["schemas"]["Person"];
+            /** Format: date-time */
+            createdAt: string;
+            /** @description When the comment was last edited, or null if it never was. */
+            updatedAt: null | string;
+            edited: boolean;
+            /** @description Markdown, cut at 20,000 characters, not converted or sanitised. */
+            text: string;
+            /** @enum {string} */
+            format: "markdown";
+            truncated: boolean;
+            reactions: components["schemas"]["Reactions"];
+        };
+        /** @description What the pull request dialog shows (#1506). */
+        PullRequestDetails: {
+            description: components["schemas"]["DetailsBody"];
+            /** @description The conversation, oldest first, at most the first 50. */
+            comments: components["schemas"]["DetailsComment"][];
+            /** @description How many comments the forge has on the pull request. */
+            commentCount: number;
+            /** @description True when `commentCount` is more than the comments returned. */
+            commentsTruncated: boolean;
+            /**
+             * @description For a release pull request, the release notes it will publish (a
+             *     release-please pull request's description is its changelog). Null
+             *     for any other pull request, and for a release pull request this
+             *     app can't identify. Never an empty string.
+             */
+            releaseNotes: null | components["schemas"]["DetailsBody"];
         };
         PullRequestChecksResponse: {
             checks: components["schemas"]["Check"][];
@@ -4883,6 +4999,86 @@ export interface operations {
                 };
             };
             /** @description The forge rejected the request as unauthorized — the saved token's scope doesn't cover reading checks, or it isn't allowed to see that repo. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description The forge reported the repo or pull request doesn't exist (or isn't visible to this token). */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description The forge rate-limited the request. */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description The forge was unreachable, or answered with something this app couldn't classify more specifically. */
+            502: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
+    getPullRequestDetails: {
+        parameters: {
+            query: {
+                forge: components["schemas"]["Forge"];
+                /** @description "owner/repo", matching a Repo.fullName from GET /api/dashboard. */
+                fullName: string;
+                /** @description Matching a PullRequest.number from GET /api/dashboard. */
+                number: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The pull request's description, conversation and, for a release pull request, release notes. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PullRequestDetails"];
+                };
+            };
+            /** @description `number` wasn't an integer, `fullName` wasn't "owner/repo", no credentials are saved for that forge, or that forge's client can't read pull request details. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description No valid session cookie or token was presented. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description The forge rejected the request as unauthorized: the saved token's scope doesn't cover reading this pull request. */
             403: {
                 headers: {
                     [name: string]: unknown;
