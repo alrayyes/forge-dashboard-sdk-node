@@ -121,3 +121,16 @@ that pull request tags the release and publishes the package to npm.
 
 Every change lands through a pull request; nothing is pushed straight to
 `main`.
+
+## Dependency advisories
+
+Two jobs share the work, both through
+[advisory-scan](https://github.com/alrayyes/advisory-scan). The `audit` job in
+`ci.yml` runs `bun audit` on a pull request and on its base, and fails only on
+advisories the pull request adds, so an advisory published overnight doesn't
+turn unrelated pull requests red. It runs when a manifest or lockfile
+changes, and on every push to `main`. `advisory-scan.yml` audits `main`
+daily, on every push that changes a manifest or lockfile, and on demand, and
+keeps one open issue titled "Dependency advisories" listing what it finds. It
+closes that issue when the audit is clean. There's no ignore list: an advisory
+with no fix stays in that issue until one ships.
