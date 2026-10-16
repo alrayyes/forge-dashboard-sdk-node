@@ -2482,6 +2482,18 @@ export interface components {
              */
             autoMergeEnabled?: boolean;
             /**
+             * @description Who holds the auto-merge, so a client can word it right. Present
+             *     only when `autoMergeEnabled` is true. `dashboard` means this app
+             *     holds a stored intent and performs the merge itself (Forgejo).
+             *     `forge` means the merge is scheduled on the forge: Forgejo's own
+             *     scheduled merge, or GitHub's auto-merge. When both exist on
+             *     Forgejo it is `dashboard`, since this app's loop merges and
+             *     Cancel clears both. Omitted means unknown: a client must not
+             *     guess it from other fields, and should treat a value it doesn't
+             *     know like an omitted one.
+             */
+            autoMergeHeldBy?: string;
+            /**
              * @description Whether GitHub will accept an "Enable auto-merge" request for
              *     this pull request from the signed-in viewer, read from the
              *     GraphQL `PullRequest.viewerCanEnableAutoMerge` field. GitHub
