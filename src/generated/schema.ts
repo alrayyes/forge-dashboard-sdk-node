@@ -1864,6 +1864,24 @@ export interface components {
              *     it via GET /api/settings/timezone.
              */
             timezone?: string;
+            /**
+             * @description Whether the user hides the bot-kept "Dependency Dashboard" issue
+             *     everywhere: the server leaves a `housekeeping` issue out of the
+             *     `issues` of GET /api/dashboard and its stream, and out of every
+             *     count and total built from them (`navCounts`, Insights). Always
+             *     present once the server applies it (#1630).
+             */
+            hideDependencyDashboard?: boolean;
+            /**
+             * @description Patterns for issue titles to leave out, in the server's own
+             *     regular expression syntax (Go RE2: no lookahead and no
+             *     backreferences). A pattern matches anywhere in the title and
+             *     ignores case; an issue matching any one is left out of `issues`
+             *     and of every count and total built from them, the same as
+             *     `hideDependencyDashboard`. Always present once the server
+             *     applies it (#1630). Empty means none.
+             */
+            ignoredTitles?: string[];
         };
         /**
          * @description Replaces the signed-in user's saved GitHub/Forgejo configuration.
@@ -1902,6 +1920,22 @@ export interface components {
              *     repeats (ignoring case) are dropped. Omitted or empty clears it.
              */
             renovateAuthors?: string[];
+            /**
+             * @description Replaces the saved choice; omitted means false, like
+             *     `renovateAuthors`, so a form sends it on every save. See
+             *     SettingsResponse.hideDependencyDashboard.
+             */
+            hideDependencyDashboard?: boolean;
+            /**
+             * @description Replaces the saved list; omitted or empty clears it. Entries are
+             *     trimmed; blanks and repeats (ignoring case) are dropped. Each
+             *     must compile as a Go RE2 regular expression: one that does not
+             *     is a 400 naming `ignoredTitles` and the entry, with the reason in
+             *     plain words ("ignoredTitles entry 2, "(": missing closing )"),
+             *     and nothing is saved. More than 20 entries, or an entry over 200
+             *     characters, is a 400 too. See SettingsResponse.ignoredTitles.
+             */
+            ignoredTitles?: string[];
         };
         /** @description See GET /api/settings/theme's own description. */
         ThemeResponse: {
@@ -2796,7 +2830,9 @@ export interface components {
              * @description True for an issue a bot keeps open and rewrites, Renovate's
              *     "Dependency Dashboard", which is not work for a person. The
              *     server decides, so every client lists and counts the same
-             *     issues. It stays in `issues`; `openIssueCount` leaves it out.
+             *     issues. It stays in `issues`, and `openIssueCount` leaves it out,
+             *     unless the user's `hideDependencyDashboard` setting is on: then
+             *     the server leaves it out of `issues` as well.
              */
             housekeeping: boolean;
             author: string;
@@ -2894,6 +2930,14 @@ export interface components {
              *     `housekeeping` ones. What the Issues badge shows.
              */
             openIssueCount: number;
+            /**
+             * @description How many open issues the user's own settings (`hideDependencyDashboard`
+             *     and `ignoredTitles`) left out of `issues`, so a client can say
+             *     "N hidden by your settings" and link to Settings; it cannot work
+             *     that out, the issues are not sent. Always present once the
+             *     server applies the settings (#1630); 0 when none are hidden.
+             */
+            settingsHiddenIssueCount?: number;
             navCounts: components["schemas"]["NavCounts"];
             /**
              * Format: date-time
