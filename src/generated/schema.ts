@@ -2938,6 +2938,19 @@ export interface components {
              *     server applies the settings (#1630); 0 when none are hidden.
              */
             settingsHiddenIssueCount?: number;
+            /**
+             * @description False from process start until this viewer's first refresh has
+             *     finished, whether it succeeded or failed; true from then on,
+             *     including after later refreshes. Per viewer: another user's
+             *     refresh does not flip it. A client shows a loading state instead
+             *     of empty lists while it is false; a failed first refresh is
+             *     reported through forge health, not by keeping this false. The same
+             *     on `GET /api/dashboard`, the stream and the MCP `get_dashboard`
+             *     output. Optional until the server emits it (#1673); the server
+             *     change makes it required, and a client treats a missing flag as
+             *     true (loaded).
+             */
+            firstRefreshDone?: boolean;
             navCounts: components["schemas"]["NavCounts"];
             /**
              * Format: date-time
