@@ -1691,7 +1691,8 @@ export interface components {
             [key: string]: unknown;
         };
         /**
-         * @description The dashboard/Insights filter bar's own saved shape —
+         * @description The dashboard/Insights filter bar's own saved shape (and the
+         *     Branches page's status, forge and search, in a `branches` group) —
          *     whatever the frontend's `$lib/filters` `loadState`/`saveState` already produce
          *     client-side (shared forge/repo/label/author/title/created/
          *     updated/groupBy, plus the two board-owned extras with no
