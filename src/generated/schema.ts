@@ -234,8 +234,9 @@ export interface paths {
          * The signed-in user's own forge configuration
          * @description Forge tokens are never returned, only whether one is set. The
          *     webhook token and secret are returned, since the user pastes them
-         *     into the forge's webhook setup. The `get_settings` MCP tool omits
-         *     both and reports `webhookConfigured` instead.
+         *     into the forge's webhook setup, and a first read creates them. For
+         *     a read that creates nothing and omits both, see
+         *     `GET /api/settings/summary`.
          */
         get: operations["getSettings"];
         /**
@@ -247,6 +248,31 @@ export interface paths {
          *     refreshing from the new configuration.
          */
         put: operations["putSettings"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/settings/summary": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The signed-in user's settings, read without side effects
+         * @description The same data as `GET /api/settings`, minus the webhook token and
+         *     secret, plus `webhookConfigured`. It never provisions webhook
+         *     credentials: for a user who has none yet it answers
+         *     `webhookConfigured: false` and creates nothing. Forge tokens are
+         *     never returned, only whether one is set. It returns exactly what
+         *     the `get_settings` MCP tool returns.
+         */
+        get: operations["getSettingsSummary"];
+        put?: never;
         post?: never;
         delete?: never;
         options?: never;
@@ -1901,6 +1927,39 @@ export interface components {
             ignoredTitleCounts: (number | null)[];
         };
         /**
+         * @description The signed-in user's settings as `GET /api/settings/summary` and the
+         *     `get_settings` MCP tool return them: every field of
+         *     SettingsResponse except `webhookToken` and `webhookSecret`, which are
+         *     never part of it, plus `webhookConfigured`. No forge token appears,
+         *     only whether one is set. Field meanings are those of the same-named
+         *     SettingsResponse properties.
+         */
+        SettingsSummary: {
+            githubUsername: string;
+            githubTokenSet: boolean;
+            /** Format: int64 */
+            githubAppInstallationId: number;
+            githubAppConfigured: boolean;
+            forgejoUrl: string;
+            forgejoUsername: string;
+            forgejoTokenSet: boolean;
+            /**
+             * @description Whether this user's webhook token and secret exist. They are
+             *     created the first time the Settings page reads
+             *     `GET /api/settings`, never by this read, so this is false for a
+             *     user who has not opened Settings yet.
+             */
+            webhookConfigured: boolean;
+            renovateRebaseLabel: string;
+            renovateAuthors: string[];
+            hideDependencyDashboard: boolean;
+            ignoredTitles: string[];
+            ignoredTitleCounts: (number | null)[];
+            /** @enum {string} */
+            theme: "" | "light" | "dark";
+            timezone: string;
+        };
+        /**
          * @description Replaces the signed-in user's saved GitHub/Forgejo configuration.
          *     A blank `githubToken` or `forgejoToken` keeps whatever token is
          *     already saved for that forge rather than clearing it — this is
@@ -2982,7 +3041,10 @@ export interface components {
              * @description How often, in seconds, a client should re-read GET
              *     /api/dashboard. The server's advice, so a client needs no
              *     interval of its own. The read is cheap and never calls a
-             *     forge; this is not the backend's refresh schedule.
+             *     forge; this is not the backend's refresh schedule. It is
+             *     shorter (2) until the viewer's first refresh has finished, so a
+             *     page that is still loading picks the data up soon after it is
+             *     ready, and the normal 30 from then on.
              */
             readIntervalSeconds: number;
             /**
@@ -3653,6 +3715,35 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description No valid session cookie was presented. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
+    getSettingsSummary: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The current settings, without any secret. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SettingsSummary"];
                 };
             };
             /** @description No valid session cookie was presented. */
