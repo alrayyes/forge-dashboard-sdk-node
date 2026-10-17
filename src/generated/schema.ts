@@ -1891,10 +1891,9 @@ export interface components {
              *     dashboard snapshot, or there is no snapshot), never a made-up 0.
              *     Only this viewer's issues are counted. On GET and on the PUT
              *     response alike: a PUT returns the counts for the list it just
-             *     saved. Optional until the server emits it; the server
-             *     change makes it required.
+             *     saved, worked out from the issues the viewer had before the save.
              */
-            ignoredTitleCounts?: (number | null)[];
+            ignoredTitleCounts: (number | null)[];
         };
         /**
          * @description Replaces the signed-in user's saved GitHub/Forgejo configuration.
