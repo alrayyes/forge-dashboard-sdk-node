@@ -1812,6 +1812,10 @@ export interface components {
              *     it's false.
              */
             githubAppConfigured: boolean;
+            /**
+             * @description Always without a username, password, query string or fragment,
+             *     even if the stored value predates those being refused.
+             */
             forgejoUrl: string;
             /** @description Used as a token-free public-repos fallback when no Forgejo token is set. */
             forgejoUsername: string;
@@ -1923,6 +1927,12 @@ export interface components {
              *     whenever a Forgejo token or username is set. That depends on
              *     stored state, so a schema alone can't express it: a save that
              *     breaks it is a 400 naming `forgejoUrl`.
+             *
+             *     Must be a plain `http://` or `https://` base URL with a host,
+             *     optionally with a path prefix. One that carries a username,
+             *     password, query string or fragment, or has another scheme, is a
+             *     400 naming `forgejoUrl`, and nothing is saved. The error never
+             *     repeats the URL.
              */
             forgejoUrl?: string;
             forgejoToken?: string;
