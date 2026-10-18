@@ -3232,9 +3232,20 @@ export interface components {
              *     reached through an unauthenticated, username-only listing.
              *     A point-in-time snapshot: a permission change since the last
              *     refresh can still make a following ensure-webhook call fail
-             *     despite this having said true.
+             *     despite this having said true. For a GitHub App connection
+             *     there is no user role to read, so this is true when listing
+             *     the repo's webhooks worked on the last refresh.
              */
             canManageWebhooks: boolean;
+            /**
+             * @description Present and true when canManageWebhooks is false because the
+             *     connection itself can't manage webhooks on this repo (GitHub
+             *     refused the hooks listing: a GitHub App without the Webhooks
+             *     permission, or a repo outside its installation), rather than the
+             *     signed-in user's role. A failed or rate-limited listing doesn't
+             *     set it. Absent otherwise.
+             */
+            webhookLockedByConnection?: boolean;
             /**
              * @description Whether the signed-in user has turned on automatic branch
              *     updates for this repo — any of its pull requests the
