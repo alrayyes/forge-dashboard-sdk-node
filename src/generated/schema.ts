@@ -3241,8 +3241,9 @@ export interface components {
              * @description Present and true when canManageWebhooks is false because the
              *     connection itself can't manage webhooks on this repo (GitHub
              *     refused the hooks listing: a GitHub App without the Webhooks
-             *     permission, or a repo outside its installation), rather than the
-             *     signed-in user's role. A failed or rate-limited listing doesn't
+             *     permission, or a repo outside its installation; Forgejo sent no
+             *     permissions object for the repo), rather than the signed-in
+             *     user's role. A failed or rate-limited listing doesn't
              *     set it. Absent otherwise.
              */
             webhookLockedByConnection?: boolean;
