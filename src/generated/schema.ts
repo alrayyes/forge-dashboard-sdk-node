@@ -3248,6 +3248,16 @@ export interface components {
              */
             webhookLockedByConnection?: boolean;
             /**
+             * @description Present and true when canManageWebhooks is false because no
+             *     token is saved for the forge. The repos then came from a
+             *     username-only listing, which the forge answers as an anonymous
+             *     caller, so the permissions it reports say nothing about the
+             *     signed-in user's role. Saving a token with the webhook scope in
+             *     Settings is the fix. Absent when a token is saved, whatever
+             *     role it holds. Set today for Forgejo only.
+             */
+            webhookNeedsToken?: boolean;
+            /**
              * @description Whether the signed-in user has turned on automatic branch
              *     updates for this repo — any of its pull requests the
              *     background refresh finds behind its base branch gets updated
