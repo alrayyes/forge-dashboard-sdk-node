@@ -16,7 +16,11 @@
 # comes from a branch on this repo, never a fork.
 name: regenerate-auto-merge
 
-on: pull_request
+# labeled: regenerate.yml adds the label right after it opens the pull request,
+# so the opened event can read the labels first and skip the job.
+on:
+  pull_request:
+    types: [opened, reopened, synchronize, labeled]
 
 permissions:
   contents: write
