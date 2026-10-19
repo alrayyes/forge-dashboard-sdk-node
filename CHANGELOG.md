@@ -1,5 +1,13 @@
 # Changelog
 
+## [10.0.1](https://github.com/alrayyes/forge-dashboard-sdk-node/compare/v10.0.0...v10.0.1) (2026-10-19)
+
+
+### Bug Fixes
+
+* **ci:** arm auto-merge on a regeneration pull request whose label arrives after it opens ([#173](https://github.com/alrayyes/forge-dashboard-sdk-node/issues/173)) ([b965532](https://github.com/alrayyes/forge-dashboard-sdk-node/commit/b96553270689dbf5e3ea83e92337b459a04b5f57)), closes [#172](https://github.com/alrayyes/forge-dashboard-sdk-node/issues/172)
+* **release:** let the publish steps pass when the version is already out ([#171](https://github.com/alrayyes/forge-dashboard-sdk-node/issues/171)) ([168c8cf](https://github.com/alrayyes/forge-dashboard-sdk-node/commit/168c8cf269315b321b6763655660dda7539f2895)), closes [#170](https://github.com/alrayyes/forge-dashboard-sdk-node/issues/170)
+
 ## [10.0.0](https://github.com/alrayyes/forge-dashboard-sdk-node/compare/v9.0.0...v10.0.0) (2026-10-19)
 
 
