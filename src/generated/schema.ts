@@ -1176,52 +1176,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/admin/requests": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * List every outbound GitHub/Forgejo request this instance has made
-         * @description Every outbound request `internal/github` or `internal/forgejo` has
-         *     made, newest first, across every account — an admin's own
-         *     credential included, since correlating a shared-credential
-         *     problem (like the rate-limit incident that motivated this
-         *     endpoint) needs a cross-account view no single account's own
-         *     session could give.
-         */
-        get: operations["listRequests"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/admin/requests/export": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Export the (filtered) outbound-request log as CSV
-         * @description The same rows GET /api/admin/requests would return for the same
-         *     filter, as a downloadable CSV file with one header row.
-         */
-        get: operations["exportRequests"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/readyz": {
         parameters: {
             query?: never;
@@ -1761,43 +1715,6 @@ export interface components {
             displayName: string;
             /** Format: date-time */
             expiresAt: string;
-        };
-        /**
-         * @description One outbound request `internal/github` or `internal/forgejo`
-         *     made, as persisted by the request_log table.
-         */
-        RequestLogEntry: {
-            /** Format: date-time */
-            loggedAt: string;
-            forge: components["schemas"]["Forge"];
-            /**
-             * @description The display username of the account whose credential made
-             *     this request, or omitted when the request was made with no
-             *     per-account credential, or when that account has since been
-             *     deleted.
-             */
-            account?: string;
-            /**
-             * @example GET
-             * @example POST
-             */
-            method: string;
-            /**
-             * @description The request's own path — GraphQL requests all report "/graphql".
-             * @example /repos/alrayyes/forge-dashboard/pulls
-             * @example /graphql
-             */
-            endpoint: string;
-            /** @description Omitted when the request never got a response at all. */
-            statusCode?: number;
-            /**
-             * @description "success", or the `ForgeErrorKind` the failure was classified as.
-             * @example success
-             * @example rate_limited
-             */
-            outcome: string;
-            /** @description Omitted when the response carried no rate-limit fields. */
-            rateLimit?: components["schemas"]["RateLimit"];
         };
         SharedUser: {
             username: string;
@@ -3304,16 +3221,6 @@ export interface components {
          *     parameter, so every snapshot a client receives follows one rule.
          */
         QueryIncludeDrafts: boolean;
-        /** @description Narrow to entries against this forge only. Omitted matches every forge. */
-        QueryRequestLogForge: components["schemas"]["Forge"];
-        /**
-         * @description Narrow to entries made under this account's own credential only —
-         *     the account's `username` (matching RequestLogEntry.account), not
-         *     its internal id. An unrecognized username matches nothing rather
-         *     than erroring, the same as any other filter with no matches.
-         *     Omitted matches every account.
-         */
-        QueryRequestLogAccount: string;
     };
     requestBodies: never;
     headers: never;
@@ -5789,104 +5696,6 @@ export interface operations {
             };
             /** @description No outstanding invite with that id. */
             404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["Error"];
-                };
-            };
-        };
-    };
-    listRequests: {
-        parameters: {
-            query?: {
-                /** @description Narrow to entries against this forge only. Omitted matches every forge. */
-                forge?: components["parameters"]["QueryRequestLogForge"];
-                /**
-                 * @description Narrow to entries made under this account's own credential only —
-                 *     the account's `username` (matching RequestLogEntry.account), not
-                 *     its internal id. An unrecognized username matches nothing rather
-                 *     than erroring, the same as any other filter with no matches.
-                 *     Omitted matches every account.
-                 */
-                account?: components["parameters"]["QueryRequestLogAccount"];
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Every request-log entry matching the filter, newest first. */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["RequestLogEntry"][];
-                };
-            };
-            /** @description No valid session cookie was presented. */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["Error"];
-                };
-            };
-            /** @description The signed-in user isn't the designated admin. */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["Error"];
-                };
-            };
-        };
-    };
-    exportRequests: {
-        parameters: {
-            query?: {
-                /** @description Narrow to entries against this forge only. Omitted matches every forge. */
-                forge?: components["parameters"]["QueryRequestLogForge"];
-                /**
-                 * @description Narrow to entries made under this account's own credential only —
-                 *     the account's `username` (matching RequestLogEntry.account), not
-                 *     its internal id. An unrecognized username matches nothing rather
-                 *     than erroring, the same as any other filter with no matches.
-                 *     Omitted matches every account.
-                 */
-                account?: components["parameters"]["QueryRequestLogAccount"];
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description A CSV file, one row per matching entry plus a header row. */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "text/csv": string;
-                };
-            };
-            /** @description No valid session cookie was presented. */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["Error"];
-                };
-            };
-            /** @description The signed-in user isn't the designated admin. */
-            403: {
                 headers: {
                     [name: string]: unknown;
                 };
