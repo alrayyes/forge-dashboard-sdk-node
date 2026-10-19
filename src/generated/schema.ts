@@ -2139,9 +2139,13 @@ export interface components {
          * @description One job/check's own status — the per-job detail CIStatus
          *     deliberately doesn't carry, since CIStatus is the combined result
          *     across every one of them.
+         *
+         *     "awaiting_approval" is a GitHub workflow run held until a
+         *     maintainer approves it. It has no jobs yet, so it is not queued and
+         *     not failed; its `url` is the run's page, where the approve button is.
          * @enum {string}
          */
-        CheckState: "queued" | "running" | "success" | "failure" | "cancelled" | "skipped" | "timed_out";
+        CheckState: "queued" | "running" | "success" | "failure" | "cancelled" | "skipped" | "timed_out" | "awaiting_approval";
         /** @description One job/check run against a pull request's head commit. */
         Check: {
             name: string;
@@ -2595,6 +2599,13 @@ export interface components {
              */
             readyToMerge: boolean;
             /**
+             * @description True when CI is failing and not only because a workflow run is
+             *     held for approval: what the Failing CI quick filter and the status
+             *     filter's Failing choice list, and what the menu pill's Failed
+             *     number counts. Always present.
+             */
+            failingCi: boolean;
+            /**
              * @description True when a review is outstanding: the forge requires one, or a
              *     reviewer was asked and hasn't answered, and the pull request
              *     isn't a draft. Unreviewed with nobody asked, approved, changes
@@ -2901,7 +2912,13 @@ export interface components {
             total: number;
             /** @description How many of them have CI that is still pending. */
             running: number;
-            /** @description How many of them have failing CI. */
+            /**
+             * @description How many of them have failing CI. A pull request whose only
+             *     failure is workflow runs held until someone approves them
+             *     (`awaitingWorkflowApproval`) is counted in `total` and not here,
+             *     as nothing failed; one with a job that really failed beside a
+             *     held run still counts.
+             */
             failed: number;
             /** @description How many of them have CI that succeeded. */
             passed: number;
