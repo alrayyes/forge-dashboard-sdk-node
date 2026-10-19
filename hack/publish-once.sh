@@ -15,7 +15,9 @@ fi
 
 # npmjs.org: "You cannot publish over the previously published versions".
 # GitHub Packages: 409 "Cannot publish over existing version".
-if printf '%s' "$output" | grep -Eiq 'previously published|over existing version|E409'; then
+# Anchored to npm's own wording and case-sensitive, so a hash or URL in the
+# output that happens to contain "e409" can't hide a real failure.
+if printf '%s' "$output" | grep -Eq 'You cannot publish over the previously published versions|Cannot publish over existing version|npm (error|ERR!) code E409'; then
   echo "publish-once: this version is already published, continuing" >&2
   exit 0
 fi
