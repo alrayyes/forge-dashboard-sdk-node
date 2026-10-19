@@ -2555,8 +2555,9 @@ export interface components {
              */
             awaitingWorkflowApproval: boolean;
             /**
-             * @description How many review comments the pull request has. Ordinary
-             *     conversation comments are not counted. Always present, and 0 when
+             * @description How many review comments the pull request has, the ones on a
+             *     line of code. Ordinary conversation comments are counted apart,
+             *     in `conversationComments`. Always present, and 0 when
              *     there are none or the forge can't say (a Forgejo draft or failed
              *     reviews call, GitHub's unauthenticated fallback). On GitHub it is read from
              *     the review threads in the pull request query, first 30 threads; on Forgejo it is the sum
@@ -2564,6 +2565,14 @@ export interface components {
              *     feeds `review`, so a draft (which makes no such call) reports 0.
              */
             reviewComments: number;
+            /**
+             * @description How many ordinary comments the pull request's conversation has,
+             *     apart from `reviewComments`. A review's own body is not a comment.
+             *     Always present, and 0 when there are none. On GitHub it comes from
+             *     the pull request query, on Forgejo from the pull request itself, so
+             *     neither costs a request.
+             */
+            conversationComments: number;
             /**
              * @description How many review threads are still open, or null when the forge
              *     can't say. GitHub reports it from its review threads, except in the
