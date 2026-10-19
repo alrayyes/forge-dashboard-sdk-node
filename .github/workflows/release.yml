@@ -60,7 +60,9 @@ jobs:
       # setup-node's Node 22 bundles. No NODE_AUTH_TOKEN / NPM_TOKEN: the
       # id-token: write permission above is the auth.
       - run: npm install -g npm@12.0.2
-      - run: npm publish --provenance --access public
+      # publish-once.sh: a retry after the package is already out (the
+      # attestation below failed on a Sigstore outage) must get past this step.
+      - run: hack/publish-once.sh npm publish --provenance --access public
 
       # Additive to the npmjs.org publish above, not a replacement
       # (rules/releases.md's "Publish to GitHub Packages, never
@@ -76,7 +78,7 @@ jobs:
         with:
           node-version: "22"
           registry-url: "https://npm.pkg.github.com"
-      - run: npm publish
+      - run: hack/publish-once.sh npm publish
         env:
           NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       - name: Attest build provenance
