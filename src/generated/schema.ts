@@ -2885,9 +2885,9 @@ export interface components {
          * @description The Branches page's numbers: how many default branches
          *     it lists and how many of those have a pipeline running, failed and
          *     passed, the same four as `NavPullRequestCount`, plus `none`, the ones
-         *     with no pipeline. Every branch is in exactly one of the four states,
-         *     so `running`, `failed`, `passed` and `none` add up to `total`. All
-         *     five are always present.
+         *     with no pipeline. A branch whose only trouble is a cancelled run
+         *     counts in `total` only, as a pull request with no checks does, so the
+         *     parts need not add up. All five are always present.
          */
         NavCount: {
             /** @description How many default branches the page lists. */
@@ -3035,11 +3035,13 @@ export interface components {
          * @description The result of the latest pipeline on a default branch's newest
          *     commit, across all its workflows. "failed" when any job failed,
          *     "running" when none failed and some are still queued or running,
+         *     "cancelled" when nothing failed and nothing is running but some run
+         *     was cancelled (a newer push or a person stopped it, so nothing broke),
          *     "passed" when all finished green, "none" when the commit has no
          *     pipeline at all (or the repository has no commit yet).
          * @enum {string}
          */
-        MainBranchStatus: "failed" | "passed" | "running" | "none";
+        MainBranchStatus: "failed" | "passed" | "running" | "cancelled" | "none";
         /** @description The newest commit on the default branch. */
         MainBranchCommit: {
             /** @description The commit id, shortened to seven characters. */
@@ -3105,12 +3107,13 @@ export interface components {
         };
         /**
          * @description How many rows are in each status, the numbers on the filter pills.
-         *     `total` is every row, so it equals the sum of the other four.
+         *     `total` is every row, so it equals the sum of the other five.
          */
         MainBranchCounts: {
             failed: number;
             passed: number;
             running: number;
+            cancelled: number;
             none: number;
             total: number;
         };
