@@ -987,6 +987,48 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/issues/details": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Read an issue's description, comments and reactions, on demand
+         * @description What the issue dialog shows: the description, the conversation in
+         *     order, and the thumbs up and thumbs down reactions on each with who
+         *     gave them. The same shape and rules as GET /api/pull-requests/details
+         *     without the release notes, which only a pull request has. Fetched live
+         *     on every call, never as part of GET /api/dashboard's snapshot.
+         *
+         *     GitHub answers with one GraphQL query. Forgejo costs one call for the
+         *     issue, one for its comments, one for the description's reactions and
+         *     one for each comment's reactions (up to 50), so the reaction calls run
+         *     at most eight at a time and stop at the first rate limit.
+         *
+         *     Every text is Markdown exactly as the forge stores it (`format` is
+         *     always `markdown`). The server neither converts nor sanitises it, so a
+         *     client must render it with raw HTML disabled. Each text is cut at
+         *     20,000 characters (`truncated`), the conversation keeps its first 50
+         *     comments (`commentsTruncated`, with the full `commentCount`), and a
+         *     reaction names at most its first 10 people while `count` is the full
+         *     number. An avatar is the forge's own URL, passed through unchanged and
+         *     never proxied.
+         *
+         *     The error answers are those of GET /api/pull-requests/details, with
+         *     the same codes. An issue that doesn't exist is a 404, and a forge that
+         *     can't be read is an error, never an empty thread.
+         */
+        get: operations["getIssueDetails"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/queued-actions": {
         parameters: {
             query?: never;
@@ -2292,6 +2334,16 @@ export interface components {
              *     app can't identify. Never an empty string.
              */
             releaseNotes: null | components["schemas"]["DetailsBody"];
+        };
+        /** @description What the issue dialog shows. */
+        IssueDetails: {
+            description: components["schemas"]["DetailsBody"];
+            /** @description The conversation, oldest first, at most the first 50. */
+            comments: components["schemas"]["DetailsComment"][];
+            /** @description How many comments the forge has on the issue. */
+            commentCount: number;
+            /** @description True when `commentCount` is more than the comments returned. */
+            commentsTruncated: boolean;
         };
         PullRequestChecksResponse: {
             checks: components["schemas"]["Check"][];
@@ -5308,6 +5360,86 @@ export interface operations {
                 };
             };
             /** @description The forge reported the repo or pull request doesn't exist (or isn't visible to this token). */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description The forge rate-limited the request. */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description The forge was unreachable, or answered with something this app couldn't classify more specifically. */
+            502: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
+    getIssueDetails: {
+        parameters: {
+            query: {
+                forge: components["schemas"]["Forge"];
+                /** @description "owner/repo", matching an Issue.repo from GET /api/dashboard. */
+                fullName: string;
+                /** @description Matching an Issue.number from GET /api/dashboard. */
+                number: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The issue's description and conversation. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IssueDetails"];
+                };
+            };
+            /** @description `number` wasn't an integer, `fullName` wasn't "owner/repo", no credentials are saved for that forge, or that forge's client can't read issue details. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description No valid session cookie or token was presented. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description The forge rejected the request as unauthorized: the saved token's scope doesn't cover reading this issue. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description The forge reported the repo or issue doesn't exist (or isn't visible to this token). */
             404: {
                 headers: {
                     [name: string]: unknown;
