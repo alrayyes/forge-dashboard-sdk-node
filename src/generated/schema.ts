@@ -2291,6 +2291,8 @@ export interface components {
             login: string;
             /** @description The forge's own avatar URL, passed through unchanged and never proxied. */
             avatarUrl: string;
+            /** @description The person's profile page on the forge, built by the server from the web address of an item the board already holds for that forge. Empty when the board holds none yet, so a client shows the name alone. */
+            url: string;
         };
         Reaction: {
             /** @description How many people gave this reaction. */
@@ -2473,6 +2475,8 @@ export interface components {
             author: string;
             /** @description The forge's own avatar URL for the author, passed through unchanged and never proxied. Empty when the forge supplies none, such as a deleted account. */
             authorAvatarUrl: string;
+            /** @description The author's profile page on the forge, built by the server from the forge's own web address, so a client needs no rule per forge. A GitHub bot links to its app page. Empty when there is nothing to link to, such as a deleted account. */
+            authorUrl: string;
             draft: boolean;
             labels: components["schemas"]["Label"][];
             /** Format: date-time */
@@ -3025,6 +3029,8 @@ export interface components {
             author: string;
             /** @description The forge's own avatar URL for whoever filed the issue, passed through unchanged and never proxied. Empty when the forge supplies none, such as a deleted account. */
             authorAvatarUrl: string;
+            /** @description The author's profile page on the forge, built by the server from the forge's own web address. Empty when there is nothing to link to, such as a deleted account. */
+            authorUrl: string;
             labels: components["schemas"]["Label"][];
             /** Format: date-time */
             createdAt: string;
