@@ -2358,6 +2358,8 @@ export interface components {
              */
             url: string;
             author: string;
+            /** @description The forge's own avatar URL for the author, passed through unchanged and never proxied. Empty when the forge supplies none, such as a deleted account. */
+            authorAvatarUrl: string;
             draft: boolean;
             labels: components["schemas"]["Label"][];
             /** Format: date-time */
