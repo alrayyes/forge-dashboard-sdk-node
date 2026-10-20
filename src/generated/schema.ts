@@ -3008,6 +3008,8 @@ export interface components {
              */
             housekeeping: boolean;
             author: string;
+            /** @description The forge's own avatar URL for whoever filed the issue, passed through unchanged and never proxied. Empty when the forge supplies none, such as a deleted account. */
+            authorAvatarUrl: string;
             labels: components["schemas"]["Label"][];
             /** Format: date-time */
             createdAt: string;
