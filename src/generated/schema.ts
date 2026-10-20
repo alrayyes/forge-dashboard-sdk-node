@@ -2481,6 +2481,23 @@ export interface components {
              */
             url: string;
         };
+        /** @description One open pull request that will close an issue when it merges. */
+        LinkedPullRequest: {
+            forge: components["schemas"]["Forge"];
+            /** @description The pull request's repository as `owner/name`, which is not always the issue's own. */
+            repo: string;
+            number: number;
+            /** @description True while the pull request is a draft. Otherwise it is open. */
+            draft: boolean;
+            /**
+             * @description The address on this dashboard that opens the page listing the pull
+             *     request, with its pop-up open: `/pull-requests.html`, `/releases.html`
+             *     or `/bots.html`, whichever page lists that kind of pull request, then
+             *     `?pr=` and `forge/owner/name/number`. A relative address.
+             * @example /pull-requests.html?pr=github/alrayyes/hush-hush/12
+             */
+            pageUrl: string;
+        };
         /** @description Who wrote a description or a comment. */
         Person: {
             login: string;
@@ -3297,6 +3314,17 @@ export interface components {
              * @description The real issue URL on its own forge.
              */
             url: string;
+            /**
+             * @description The open pull requests that will close the issue when they merge,
+             *     the other side of a pull request's `closesIssues`, ordered by
+             *     repository and number. Always present, and empty when there are
+             *     none. The server joins the pull requests it already holds, so it
+             *     costs the forge no request. It counts every open pull request the
+             *     user could see, including a draft and one they hid, but not one in
+             *     a repository whose pull requests they ignore. A pull request that
+             *     merged or closed is gone from the list on the next refresh.
+             */
+            linkedPullRequests: components["schemas"]["LinkedPullRequest"][];
             /**
              * @description True for an issue a bot keeps open and rewrites, Renovate's
              *     "Dependency Dashboard", which is not work for a person. The
