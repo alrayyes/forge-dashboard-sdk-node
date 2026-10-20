@@ -1409,6 +1409,47 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/presence": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Say whether a browser tab of the dashboard is being looked at
+         * @description The page calls this when its tab becomes visible or hidden
+         *     (`document.visibilityState`), when the person stops or resumes
+         *     using it, and on a slow heartbeat while it is visible. While at
+         *     least one tab is visible, has had input recently and keeps sending
+         *     heartbeats, the dashboard counts as in use and the scheduled
+         *     background refresh keeps running. When every tab has said it is
+         *     hidden, or has stopped sending heartbeats for three heartbeat
+         *     periods (a closed laptop, a crashed browser), the dashboard counts
+         *     as unused and, after the idle period, the scheduled refresh rests
+         *     (see `IDLE_AFTER`). A tab that becomes visible after the refresh
+         *     rested makes it run once.
+         *
+         *     This call is the only way the server learns whether a tab is
+         *     looked at. An open live stream says nothing about it, and neither
+         *     does a read carrying `X-Background-Read`. The call itself is not a
+         *     request that counts as use; only a visible report is.
+         *
+         *     A browser session only: a personal API token is refused with 403,
+         *     so a script cannot hold the refresh active.
+         *
+         *     The answer carries the two timings the page follows, so neither
+         *     is hard-coded in the browser.
+         */
+        post: operations["reportDashboardPresence"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/dashboard/refresh": {
         parameters: {
             query?: never;
@@ -1772,6 +1813,29 @@ export interface components {
             upstreamStatus?: number;
             /** @description Only with `forge_error`, and only when the forge sent one (GitHub's `X-GitHub-Request-Id`). What the forge's support asks for. */
             requestId?: string;
+        };
+        PresenceReport: {
+            /**
+             * @description Names one browser tab, chosen by the page when it loads. Not a
+             *     user id and not stored beyond the tab's heartbeats.
+             * @example 3f1c9a52-7d2e-4a6b-9f10-5b8e2c7d1a44
+             */
+            viewerId: string;
+            /**
+             * @description True while the tab is visible and has had input recently. False
+             *     once it is hidden or the person has stopped using it.
+             */
+            visible: boolean;
+        };
+        PresenceAnswer: {
+            /** @description How often a visible tab reports itself visible again. */
+            heartbeatSeconds: number;
+            /**
+             * @description How long a visible tab may go without input before it reports
+             *     `visible: false`. 0 means the server's idle mode is off and the
+             *     page never needs to.
+             */
+            idleAfterSeconds: number;
         };
         RegisterBeginRequest: {
             /**
@@ -3601,6 +3665,13 @@ export interface components {
     };
     responses: never;
     parameters: {
+        /**
+         * @description Any value says the read is the page's own timed refresh of its data,
+         *     not something a person asked for. Such a read does not count as use
+         *     of the dashboard, so a tab nobody is looking at cannot keep the
+         *     scheduled refresh running by polling.
+         */
+        HeaderBackgroundRead: string;
         PathUsername: string;
         PathWebhookToken: string;
         PathTokenID: string;
@@ -6360,7 +6431,15 @@ export interface operations {
                  */
                 includeHidden?: components["parameters"]["QueryIncludeHidden"];
             };
-            header?: never;
+            header?: {
+                /**
+                 * @description Any value says the read is the page's own timed refresh of its data,
+                 *     not something a person asked for. Such a read does not count as use
+                 *     of the dashboard, so a tab nobody is looking at cannot keep the
+                 *     scheduled refresh running by polling.
+                 */
+                "X-Background-Read"?: components["parameters"]["HeaderBackgroundRead"];
+            };
             path?: never;
             cookie?: never;
         };
@@ -6455,6 +6534,57 @@ export interface operations {
             };
             /** @description No background refresh is running yet for this user — Settings has never been saved. */
             404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
+    reportDashboardPresence: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PresenceReport"];
+            };
+        };
+        responses: {
+            /** @description The report was recorded. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PresenceAnswer"];
+                };
+            };
+            /** @description The body is not JSON, or `viewerId` or `visible` is missing or malformed. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description No valid session cookie was presented. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description A personal API token was presented. This call is for a browser session. */
+            403: {
                 headers: {
                     [name: string]: unknown;
                 };
