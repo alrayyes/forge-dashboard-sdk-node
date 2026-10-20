@@ -1531,6 +1531,55 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/stats/forge-api": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * How many forge API calls the dashboard has spent, and on what
+         * @description Counts the forge requests made since the server started, so a change
+         *     to what the dashboard refreshes can be shown to have saved budget, and
+         *     a rate-limit incident traced to the refresh that caused it. One bucket
+         *     per forge, credential, refresh `kind` and repository, each with the
+         *     REST calls made, the GraphQL calls made, the GraphQL `rateLimit.cost`
+         *     they were charged, and the requests answered `304 Not Modified`. A 304
+         *     is not charged against the REST budget, so it is counted on its own and
+         *     not as a REST call.
+         *
+         *     `kind` says why the request was made: `full` (a whole-account
+         *     refresh), `scoped_webhook` (one repository, after a webhook),
+         *     `ci_poll` (one repository, waiting on a running check),
+         *     `auto_merge_poll` (one repository, waiting on an armed auto-merge),
+         *     `details` (a dialog or check list opened), `hook_maintenance`
+         *     (checking, adding or upgrading webhooks), `user_action` (a button
+         *     pressed, a queued action, or something the dashboard does for you such
+         *     as auto-merge) and `unknown` (a request nobody tagged, which is a bug
+         *     to report). A request that names no repository, such as listing an
+         *     account's repositories, has an empty `repo`.
+         *
+         *     The counters live in memory and start from zero on every start;
+         *     `since` says when counting began. `credential` names the connected
+         *     account or App installation by a label that carries no secret and no
+         *     user id (`app:<installation id>`, `token:<short hash>`,
+         *     `public:<username>`). Only the buckets of the caller's own
+         *     credentials are returned. They are matched to the credentials
+         *     the caller has saved, and a GitHub App installation id is a number the
+         *     caller types in, so until the dashboard has one user, someone who saves
+         *     another account's installation id sees that installation's counts. `budgets` are the rate limits each forge last
+         *     reported, the same figures as `forges` on GET /api/dashboard.
+         */
+        get: operations["getForgeApiStats"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/sharing": {
         parameters: {
             query?: never;
@@ -2495,6 +2544,41 @@ export interface components {
             rateLimitREST?: components["schemas"]["RateLimit"];
             /** @description Why a "@dependabot" comment sent through this forge's credential would be refused. Dependabot only honours commands from a user with push access and ignores GitHub App accounts whatever permissions the App holds. Set only for GitHub when the connected credential is an App with no personal access token saved to send commands as. The Dependabot buttons lock with this text, auto-update-branch skips Dependabot pull requests, and the dependabot-action endpoint answers 409 with it. Omitted when commands work. */
             dependabotCommandsBlocked?: string;
+        };
+        ForgeApiStats: {
+            /**
+             * Format: date-time
+             * @description When counting began, which is when the server last started.
+             */
+            since: string;
+            /** @description One row per forge, credential, kind and repository that made a request, ordered by forge, credential, kind and repo. */
+            buckets: components["schemas"]["ForgeApiBucket"][];
+            /** @description The rate limits each forge last reported, one row per forge. */
+            budgets: components["schemas"]["ForgeApiBudget"][];
+        };
+        ForgeApiBucket: {
+            forge: components["schemas"]["Forge"];
+            /** @description The credential the requests were made with, as a label with no secret and no user id. */
+            credential: string;
+            /** @description Why the requests were made. Open-ended, so a new kind is not a breaking change; today `full`, `scoped_webhook`, `ci_poll`, `auto_merge_poll`, `details`, `hook_maintenance`, `user_action` and `unknown`. */
+            kind: string;
+            /** @description The repository as `owner/name`, or empty when the request touched no single repository. `other` collects the repositories past the cap on how many are counted separately. */
+            repo: string;
+            /** @description REST requests that were charged against the REST budget. */
+            rest: number;
+            /** @description GraphQL requests made. */
+            graphql: number;
+            /** @description The `rateLimit.cost` points the GraphQL requests were charged. */
+            graphqlCost: number;
+            /** @description Requests answered `304 Not Modified`, which cost nothing. */
+            notModified: number;
+        };
+        ForgeApiBudget: {
+            forge: components["schemas"]["Forge"];
+            /** @description The forge's GraphQL budget as last reported; absent when it has none. */
+            rateLimitGraphQL?: components["schemas"]["RateLimit"];
+            /** @description The forge's REST budget as last reported; absent when not reported. */
+            rateLimitREST?: components["schemas"]["RateLimit"];
         };
         /** @description One of a forge API's own request budgets for the credential the last refresh used — see ForgeHealth.rateLimitGraphQL/rateLimitREST for which budget this is and when each is (or isn't) reported. */
         RateLimit: {
@@ -6543,6 +6627,35 @@ export interface operations {
             };
             /** @description The forge was unreachable, or answered with something this app couldn't classify more specifically. */
             502: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
+    getForgeApiStats: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The counters since the server started. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ForgeApiStats"];
+                };
+            };
+            /** @description No valid session cookie was presented. */
+            401: {
                 headers: {
                     [name: string]: unknown;
                 };
