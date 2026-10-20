@@ -788,6 +788,37 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/pull-requests/auto-update": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Turn the automatic branch update on or off for one pull request
+         * @description A pure local write: nothing is sent to the forge. The choice is kept
+         *     only while it differs from the repo's auto-update setting
+         *     (`/api/repos/auto-update-branch/enable`), so a choice that matches
+         *     the repo is dropped and the pull request follows the repo again, and
+         *     a later change to the repo's setting reaches it. With `enabled`
+         *     `null` or absent the pull request goes back to its repo's setting.
+         *     Idempotent. A draft and a release-please pull request are never
+         *     updated automatically, whatever is chosen: `autoUpdate.unavailable`
+         *     in GET /api/dashboard says so. The server forgets the choice once
+         *     the pull request is no longer open, its repo is no longer tracked, or
+         *     the repo's setting changes to match it. A pull request the dashboard
+         *     doesn't hold is a 404.
+         */
+        post: operations["setPullRequestAutoUpdate"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/pull-requests/unhide": {
         parameters: {
             query?: never;
@@ -972,7 +1003,9 @@ export interface paths {
          *     number. An avatar is the forge's own URL, passed through unchanged
          *     and never proxied; this app sets no Content-Security-Policy today, so
          *     the browser loads it directly. A future policy's `img-src` has to
-         *     allow avatars.githubusercontent.com and the Forgejo host.
+         *     allow avatars.githubusercontent.com, repository-images.githubusercontent.com
+         *     (a GitHub repository's logo, see `logoUrl` on a repo in GET
+         *     /api/dashboard) and the Forgejo host.
          *
          *     The error answers are those of GET /api/pull-requests/checks, with
          *     the same codes. A forge that can't be read is an error, never an
@@ -2228,6 +2261,37 @@ export interface components {
          */
         CIStatus: "success" | "failure" | "pending" | "none";
         /**
+         * @description How many of a pull request's checks are in each state, so a client can
+         *     say how far a pipeline is without opening it. The server tallies
+         *     them from what it already reads to work out `ci`, so they cost no
+         *     request. Always present, all zero when there are no checks.
+         *
+         *     `waiting` is a check that has not started: queued, or pending where the
+         *     forge doesn't tell queued from running. The counts agree with `ci`: a
+         *     pull request whose `ci` is `pending` has `failed` at 0, and one whose
+         *     `ci` is `success` has nothing running, waiting or failed. Two kinds of
+         *     run are therefore in none of the four. A run held for approval:
+         *     `awaitingWorkflowApproval` says that. A cancelled run: a push or a
+         *     concurrency group superseded it, and the overall state does not read it
+         *     as a failure while others still run. A timed-out or stale check counts
+         *     as `failed`, a skipped, neutral or bare completed one as `passed`.
+         *
+         *     On GitHub the counts come from the same rollup as `ci`; on Forgejo from
+         *     the statuses of the combined commit status, where nothing is ever
+         *     `running`. Forgejo answers one page of those statuses, and when its
+         *     total says there are more than the page holds the counts are all zero
+         *     rather than an undercount. When GitHub's rollup is of an earlier
+         *     commit than the head (a push still being processed), the counts are
+         *     zero too. GitHub's unauthenticated fallback has no such counts, so
+         *     there they are all zero.
+         */
+        CheckCounts: {
+            passed: number;
+            running: number;
+            waiting: number;
+            failed: number;
+        };
+        /**
          * @description One job/check's own status — the per-job detail CIStatus
          *     deliberately doesn't carry, since CIStatus is the combined result
          *     across every one of them.
@@ -2484,6 +2548,7 @@ export interface components {
             /** Format: date-time */
             updatedAt: string;
             ci: components["schemas"]["CIStatus"];
+            checks: components["schemas"]["CheckCounts"];
             mergeStatus: components["schemas"]["MergeStatus"];
             /**
              * @description Whether this pull request's base branch has moved since its
@@ -2754,6 +2819,55 @@ export interface components {
              *     present.
              */
             needsReview: boolean;
+            autoUpdate: components["schemas"]["AutoUpdate"];
+        };
+        /**
+         * @description Whether the dashboard brings this pull request's branch up to date by
+         *     itself: the pull request's own choice when it has one
+         *     (`POST /api/pull-requests/auto-update`), else its repo's
+         *     auto-update setting. Always present.
+         */
+        AutoUpdate: {
+            /**
+             * @description What the background pass does with this pull request. Always
+             *     false when `unavailable` is set.
+             */
+            enabled: boolean;
+            /**
+             * @description `repo` when the pull request follows its repo's setting,
+             *     `pullRequest` when the user chose for this one.
+             * @enum {string}
+             */
+            source: "repo" | "pullRequest";
+            /**
+             * @description Set when the pass skips this pull request however it is switched,
+             *     so a client shows the reason instead of a switch that does
+             *     nothing. Null otherwise.
+             */
+            unavailable: null | components["schemas"]["AutoUpdateUnavailable"];
+        };
+        AutoUpdateUnavailable: {
+            /** @enum {string} */
+            code: "draft" | "release_please";
+            /** @description A sentence a client can show as it is. */
+            reason: string;
+        };
+        /**
+         * @description Which pull request, and whether the dashboard should update its
+         *     branch automatically.
+         */
+        PullRequestAutoUpdateRequest: {
+            forge: components["schemas"]["Forge"];
+            /** @description "owner/repo", matching a Repo.fullName from GET /api/dashboard. */
+            fullName: string;
+            /** @description Matching a PullRequest.number from GET /api/dashboard. */
+            number: number;
+            /**
+             * @description `true` to update this pull request automatically, `false` to
+             *     leave it alone, whatever its repo says. `null` or absent
+             *     returns it to its repo's setting.
+             */
+            enabled?: boolean | null;
         };
         /** @description Which safe action to queue, on which pull request. */
         QueuedActionRequest: {
@@ -3307,6 +3421,22 @@ export interface components {
              * @example https://github.com/alrayyes/forge-dashboard
              */
             url: string;
+            /**
+             * Format: uri
+             * @description The repository's own logo, only when it has one: a GitHub
+             *     repository's custom social preview image, or a Forgejo
+             *     repository's own avatar. Absent otherwise, and never the
+             *     generated social card GitHub shows for a repository with none,
+             *     nor the owner's avatar. Always an https URL, passed through
+             *     unchanged and never proxied: on GitHub exactly
+             *     repository-images.githubusercontent.com, on Forgejo the
+             *     instance's own host. A GitHub custom image is a wide banner,
+             *     not a square logo.
+             *     Absent for a repository reached through an unauthenticated,
+             *     username-only listing, since that listing carries no image.
+             * @example https://repository-images.githubusercontent.com/123/abc
+             */
+            logoUrl?: string;
             /**
              * @description Whether the signed-in user has ignored this repo in either
              *     scope below — true whenever ignoredPRs or
@@ -4925,6 +5055,58 @@ export interface operations {
             };
             /** @description No valid session cookie was presented. */
             401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
+    setPullRequestAutoUpdate: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PullRequestAutoUpdateRequest"];
+            };
+        };
+        responses: {
+            /** @description The choice is saved (or dropped). */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /**
+             * @description The request body wasn't valid JSON, `forge` wasn't a known forge,
+             *     `fullName` wasn't "owner/repo", or `number` wasn't positive.
+             */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description No valid session cookie was presented. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description The dashboard doesn't hold that pull request. */
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };
