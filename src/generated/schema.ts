@@ -1651,6 +1651,12 @@ export interface components {
              *     mean the dashboard's row was stale: the pull request has
              *     nothing left to merge.
              *
+             *     `forge_error` means the forge failed on its own side (a 5xx):
+             *     nothing is wrong with the request, so asking again may work.
+             *     `upstreamStatus` and `requestId` then say what the forge
+             *     answered with, for tracing a report. Update branch is tried a
+             *     second time by the server before this is answered.
+             *
              *     `not_rate_limited` belongs to queueing an action: the forge
              *     isn't rate limited, so act directly. `not_open` is only an
              *     outcome of a queued action: the pull request was gone from the
@@ -1664,7 +1670,7 @@ export interface components {
              *     auto-merge: already clean, use Merge).
              * @enum {string}
              */
-            code: "already_merged" | "already_closed" | "not_mergeable" | "conflict" | "behind" | "checks_pending" | "checks_failing" | "blocked_by_protection" | "already_up_to_date" | "auto_merge_not_allowed" | "ready_to_merge" | "permission" | "rate_limited" | "not_rate_limited" | "not_open" | "unknown";
+            code: "already_merged" | "already_closed" | "not_mergeable" | "conflict" | "behind" | "checks_pending" | "checks_failing" | "blocked_by_protection" | "already_up_to_date" | "auto_merge_not_allowed" | "ready_to_merge" | "permission" | "rate_limited" | "forge_error" | "not_rate_limited" | "not_open" | "unknown";
             /**
              * @description A short reason in plain words, safe to show a person, always.
              *     With `code: unknown` it is the forge's own sentence when that
@@ -1680,6 +1686,10 @@ export interface components {
              * @description Only with `rate_limited`, when the forge said so. When the budget comes back. On Forgejo it comes from the `Retry-After` header, in seconds or as a date.
              */
             resetsAt?: string;
+            /** @description Only with `forge_error`. The HTTP status the forge answered with. */
+            upstreamStatus?: number;
+            /** @description Only with `forge_error`, and only when the forge sent one (GitHub's `X-GitHub-Request-Id`). What the forge's support asks for. */
+            requestId?: string;
         };
         RegisterBeginRequest: {
             /**
@@ -2492,7 +2502,12 @@ export interface components {
              * @description What sort of pull request this is, decided by the server so no
              *     client keeps its own copy of the rule. `release`: release-please's,
              *     by its `autorelease:` label (a person opens these, so the label is
-             *     the only signal, and it wins over any bot author). `dependency`:
+             *     the main signal, and it wins over any bot author), or, when the
+             *     label is missing because release-please failed before applying it,
+             *     by its head branch: `release-please--branches--<base branch>`
+             *     (with `--components--<name>` after it for a repo that releases
+             *     several components) in the same repository and aimed at that base
+             *     branch. A fork's pull request is never a release. `dependency`:
              *     opened by Dependabot or Renovate, in either spelling of the login
              *     (the bare slug GraphQL gives, or REST's `[bot]` form), on either
              *     forge. `regular`: everything else. Always present.
