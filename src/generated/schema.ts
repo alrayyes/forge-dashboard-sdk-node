@@ -3018,9 +3018,10 @@ export interface components {
          * @description The Branches page's numbers: how many default branches
          *     it lists and how many of those have a pipeline running, failed and
          *     passed, the same four as `NavPullRequestCount`, plus `none`, the ones
-         *     with no pipeline. A branch whose only trouble is a cancelled run
-         *     counts in `total` only, as a pull request with no checks does, so the
-         *     parts need not add up. All five are always present.
+         *     with no pipeline, and `awaitingApproval`, the ones whose workflow runs
+         *     are held until someone approves them. A branch whose only trouble is a
+         *     cancelled run counts in `total` only, as a pull request with no checks
+         *     does, so the parts need not add up. All six are always present.
          */
         NavCount: {
             /** @description How many default branches the page lists. */
@@ -3033,6 +3034,12 @@ export interface components {
             passed: number;
             /** @description How many of them have no pipeline. */
             none: number;
+            /**
+             * @description How many of them have workflow runs held until someone approves
+             *     them. Nothing has run and nothing has failed, so they are in none
+             *     of `running`, `failed` and `passed`.
+             */
+            awaitingApproval: number;
         };
         /**
          * @description A pull request page's numbers. `running`, `failed` and
@@ -3170,11 +3177,13 @@ export interface components {
          *     "running" when none failed and some are still queued or running,
          *     "cancelled" when nothing failed and nothing is running but some run
          *     was cancelled (a newer push or a person stopped it, so nothing broke),
-         *     "passed" when all finished green, "none" when the commit has no
-         *     pipeline at all (or the repository has no commit yet).
+         *     "awaiting_approval" when GitHub holds the commit's workflow runs until
+         *     a maintainer approves them (they create no check runs, so nothing
+         *     runs), "passed" when all finished green, "none" when the commit has
+         *     no pipeline at all (or the repository has no commit yet).
          * @enum {string}
          */
-        MainBranchStatus: "failed" | "passed" | "running" | "cancelled" | "none";
+        MainBranchStatus: "failed" | "passed" | "running" | "cancelled" | "awaiting_approval" | "none";
         /** @description The newest commit on the default branch. */
         MainBranchCommit: {
             /** @description The commit id, shortened to seven characters. */
@@ -3240,13 +3249,14 @@ export interface components {
         };
         /**
          * @description How many rows are in each status, the numbers on the filter pills.
-         *     `total` is every row, so it equals the sum of the other five.
+         *     `total` is every row, so it equals the sum of the other six.
          */
         MainBranchCounts: {
             failed: number;
             passed: number;
             running: number;
             cancelled: number;
+            awaitingApproval: number;
             none: number;
             total: number;
         };
