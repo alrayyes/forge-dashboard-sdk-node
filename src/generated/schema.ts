@@ -2265,6 +2265,17 @@ export interface components {
              */
             excerpt?: string;
         };
+        /** @description One issue a pull request will close when it merges. */
+        ClosingIssue: {
+            /** @description The issue's repository as `owner/name`, which is not always the pull request's own. */
+            repo: string;
+            number: number;
+            /**
+             * Format: uri
+             * @description The issue's page on its forge.
+             */
+            url: string;
+        };
         /** @description Who wrote a description or a comment. */
         Person: {
             login: string;
@@ -2588,6 +2599,23 @@ export interface components {
              *     neither costs a request.
              */
             conversationComments: number;
+            /**
+             * @description The issues the pull request will close when it merges. Always
+             *     present, and empty when there are none. On GitHub it is the
+             *     forge's own list of closing references, read in the pull request
+             *     query; GitHub's unauthenticated fallback (no token) has no such
+             *     field, so it lists none. Forgejo has none either, so the server
+             *     reads the closing keywords (close, closes, closed, fix, fixes,
+             *     fixed, resolve, resolves, resolved) in the description the way
+             *     Forgejo does: a keyword, an optional colon, one space, then `#NUMBER`
+             *     or `owner/repo#NUMBER`, and each keyword covers the one reference
+             *     right after it. Code, HTML comments and a number that runs into
+             *     letters count for nothing. The `owner/repo#NUMBER` form follows
+             *     Forgejo's source and has not been tried on a live instance. Only a
+             *     pull request aimed at its repo's default branch closes anything,
+             *     so one aimed elsewhere always lists none.
+             */
+            closesIssues: components["schemas"]["ClosingIssue"][];
             /**
              * @description How many review threads are still open, or null when the forge
              *     can't say. GitHub reports it from its review threads, except in the
