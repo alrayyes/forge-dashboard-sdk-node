@@ -2373,6 +2373,16 @@ export interface components {
          *     `cancelled` has `failed` at 0. A timed-out or stale check counts as `failed`, a skipped,
          *     neutral or bare completed one as `passed`, on Forgejo too.
          *
+         *     `skipped` is a newer field and says how many of the `passed` checks
+         *     were skipped. It never exceeds `passed`: it is inside `passed`, not
+         *     beside it, so `passed` still counts every check that needs nothing more
+         *     and the four states still add up to the checks the pipeline lists. The
+         *     server always sends it; a client that may talk to an older server
+         *     reads a missing one as none. A neutral or bare completed check is passed without
+         *     being skipped. A client that draws it shows it as detail on the passed
+         *     count, and a pipeline where every passed check was skipped can read as
+         *     skipped.
+         *
          *     On GitHub the counts come from the same rollup as the overall state,
          *     for a pull request and a branch alike; on Forgejo a pull request counts
          *     the statuses of the combined commit status, where nothing is ever
@@ -2391,6 +2401,7 @@ export interface components {
             running: number;
             waiting: number;
             failed: number;
+            skipped: number;
         };
         /**
          * @description One job/check's own status — the per-job detail CIStatus
