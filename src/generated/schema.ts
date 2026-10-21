@@ -422,7 +422,7 @@ export interface paths {
          * @description Stops the token authenticating immediately. Idempotent — deleting
          *     an id that's already gone (or never belonged to the signed-in
          *     user) still answers 204, the same as any other delete-by-id
-         *     endpoint here (compare DELETE /api/sharing/{username}), so a
+         *     endpoint here (compare DELETE /api/admin/users/{username}), so a
          *     double-click or a retried request isn't an error.
          */
         delete: operations["deleteAPIToken"];
@@ -1390,14 +1390,10 @@ export interface paths {
          *     blocks on a live call to either forge, so it answers instantly even
          *     when a forge is slow or unreachable.
          *
-         *     Omitting `owner` returns the signed-in user's own dashboard. Passing
-         *     it returns that user's dashboard instead — allowed only when they've
-         *     shared it with the caller (or the caller is viewing their own
-         *     username), and refused with a 403 otherwise.
+         *     Always the signed-in user's own dashboard.
          *
-         *     Draft pull requests are left out unless `includeDrafts=true`. With
-         *     `owner`, the same rule applies to that user's dashboard, and
-         *     `hiddenDrafts` counts only the drafts in repos that user hasn't
+         *     Draft pull requests are left out unless `includeDrafts=true`, and
+         *     `hiddenDrafts` counts only the drafts in repos the user hasn't
          *     ignored, the same repos whose other pull requests show.
          */
         get: operations["getDashboard"];
@@ -1424,8 +1420,6 @@ export interface paths {
          *     one, which is what turns that into a live update instead of
          *     something only the next scheduled refresh picks up.
          *
-         *     Doesn't support `owner` the way GET /api/dashboard does — only
-         *     ever the signed-in user's own dashboard, never a shared one.
          *     The frontend's own 30-second poll against GET /api/dashboard
          *     keeps running unconditionally, connected or not — a browser or
          *     proxy that can't hold an SSE connection open just never
@@ -1503,12 +1497,6 @@ export interface paths {
          *     briefly unreachable, instead of waiting for the next scheduled
          *     background refresh.
          *
-         *     Doesn't support `owner` the way GET /api/dashboard does — only
-         *     ever the signed-in user's own dashboard, never a shared one, so
-         *     a user with shared access to someone else's dashboard can never
-         *     spend that owner's own forge rate-limit budget on their own
-         *     schedule.
-         *
          *     The server holds a five-second cooldown per user, so this can't
          *     be used to hammer a forge's API budget. A call inside that
          *     window does not fetch: it answers 200 with the current snapshot
@@ -1553,7 +1541,7 @@ export interface paths {
          *     `stale` with `staleSince`, the same carry-over `forges[].staleSince`
          *     on GET /api/dashboard reports. A forge whose rate-limit budget is
          *     spent is skipped until it resets and its rows are kept the same way.
-         *     Only the signed-in user's own repositories, so there is no `owner`.
+         *     Only the signed-in user's own repositories.
          *
          *     A repository with no default branch yet (empty) or no pipeline has
          *     status `none`. Unauthenticated GitHub access (a username with no
@@ -1653,55 +1641,6 @@ export interface paths {
         put?: never;
         post?: never;
         delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/sharing": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * The signed-in user's sharing relationships
-         * @description Both directions at once: who the signed-in user has shared their
-         *     own dashboard with, and whose dashboards have been shared with
-         *     them.
-         */
-        get: operations["getSharing"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/sharing/{username}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        /**
-         * Share the signed-in user's dashboard with username
-         * @description Idempotent — sharing with a username already on the list changes
-         *     nothing. username needs no tokens of their own configured to view
-         *     the shared dashboard; they see the owner's aggregated data exactly
-         *     as the owner sees it.
-         */
-        put: operations["shareWith"];
-        post?: never;
-        /**
-         * Stop sharing the signed-in user's dashboard with username
-         * @description Idempotent — removing a username that was never shared with changes nothing.
-         */
-        delete: operations["unshareWith"];
         options?: never;
         head?: never;
         patch?: never;
@@ -2000,16 +1939,6 @@ export interface components {
             displayName: string;
             /** Format: date-time */
             expiresAt: string;
-        };
-        SharedUser: {
-            username: string;
-            displayName: string;
-        };
-        SharingResponse: {
-            /** @description Users the signed-in user has shared their own dashboard with. */
-            sharedWith: components["schemas"]["SharedUser"][];
-            /** @description Users who have shared their dashboard with the signed-in user. */
-            sharedWithMe: components["schemas"]["SharedUser"][];
         };
         /**
          * @description The signed-in user's own GitHub/Forgejo configuration. Never
@@ -3489,8 +3418,7 @@ export interface components {
              * @description The signed-in user's queued actions, waiting and finished in the
              *     last 24 hours (GET /api/queued-actions), so a client lists them in
              *     its Activity panel and learns an outcome from the stream it
-             *     already reads. Always present, empty when there are none, and
-             *     always empty on another user's shared dashboard.
+             *     already reads. Always present, empty when there are none.
              */
             queuedActions: components["schemas"]["QueuedAction"][];
             /**
@@ -6664,8 +6592,6 @@ export interface operations {
     getDashboard: {
         parameters: {
             query?: {
-                /** @description A username that has shared their dashboard with the caller. Defaults to the caller's own. */
-                owner?: string;
                 /**
                  * @description Whether draft pull requests are in `pullRequests`. Defaults to
                  *     `false`: nothing can be merged, auto-merged or updated on a draft,
@@ -6709,24 +6635,6 @@ export interface operations {
             };
             /** @description No valid session cookie was presented. */
             401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["Error"];
-                };
-            };
-            /** @description owner hasn't shared their dashboard with the signed-in user. */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["Error"];
-                };
-            };
-            /** @description No user is registered under owner. */
-            404: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -7036,111 +6944,6 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["ForgeApiStats"];
                 };
-            };
-            /** @description No valid session cookie was presented. */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["Error"];
-                };
-            };
-        };
-    };
-    getSharing: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description The current sharing relationships. */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["SharingResponse"];
-                };
-            };
-            /** @description No valid session cookie was presented. */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["Error"];
-                };
-            };
-        };
-    };
-    shareWith: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                username: components["parameters"]["PathUsername"];
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Shared. */
-            204: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Can't share your own dashboard with yourself. */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["Error"];
-                };
-            };
-            /** @description No valid session cookie was presented. */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["Error"];
-                };
-            };
-            /** @description No user is registered under that username. */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["Error"];
-                };
-            };
-        };
-    };
-    unshareWith: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                username: components["parameters"]["PathUsername"];
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description No longer shared. */
-            204: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
             };
             /** @description No valid session cookie was presented. */
             401: {
