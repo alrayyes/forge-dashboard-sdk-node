@@ -1,5 +1,12 @@
 # Changelog
 
+## [12.10.1](https://github.com/alrayyes/forge-dashboard-sdk-node/compare/v12.10.0...v12.10.1) (2026-10-21)
+
+
+### Bug Fixes
+
+* **ci:** merge the release PR directly when GitHub says it is unstable ([#195](https://github.com/alrayyes/forge-dashboard-sdk-node/issues/195)) ([a3c9a5f](https://github.com/alrayyes/forge-dashboard-sdk-node/commit/a3c9a5f0b3bd78a96aea6f94fee60c9b1a4105ba))
+
 ## [12.10.0](https://github.com/alrayyes/forge-dashboard-sdk-node/compare/v12.9.0...v12.10.0) (2026-10-20)
 
 
