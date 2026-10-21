@@ -2548,6 +2548,15 @@ export interface components {
              * @example /pull-requests.html?pr=github/alrayyes/hush-hush/12
              */
             pageUrl: string;
+            ci: components["schemas"]["CIStatus"];
+            checks: components["schemas"]["CheckCounts"];
+            /**
+             * @description The same flag as on the pull request itself: true when GitHub is
+             *     holding a workflow run on the head commit until someone approves
+             *     it. A client says "waiting for approval" rather than "check
+             *     failed" while it is true. Always present; false on Forgejo.
+             */
+            awaitingWorkflowApproval: boolean;
         };
         /** @description Who wrote a description or a comment. */
         Person: {
