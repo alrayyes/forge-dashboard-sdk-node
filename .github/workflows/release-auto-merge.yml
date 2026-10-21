@@ -19,7 +19,34 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
-      - run: gh pr merge --auto --squash "$PR_URL"
+      # `gh pr merge --auto` asks GitHub to merge once the required checks
+      # pass. GitHub refuses that, with "in unstable status", when the pull
+      # request is `unstable`: every required check already passed and only
+      # a non-required one (mutation, coverage) is still going or failed,
+      # which is the state this job lands in when it starts a minute or two
+      # after the pull request opens. "In clean status" is the same answer
+      # for a pull request that is already mergeable. Both mean there is
+      # nothing left to wait for, so merge now. Any other refusal (a merge
+      # conflict, a required check still pending) is a real failure and
+      # stops the job with GitHub's own message, and GitHub refuses the
+      # direct merge too if a required check is not done.
+      # https://docs.github.com/en/pull-requests/collaborating-with-pull-requests/incorporating-changes-from-a-pull-request/automatically-merging-a-pull-request
+      - name: Merge the release PR
+        run: |
+          set -euo pipefail
+          if out=$(gh pr merge --auto --squash "$PR_URL" 2>&1); then
+            echo "$out"
+            exit 0
+          fi
+          echo "$out" >&2
+          case "$out" in
+            *"is in unstable status"* | *"is in clean status"*)
+              gh pr merge --squash "$PR_URL"
+              ;;
+            *)
+              exit 1
+              ;;
+          esac
         env:
           PR_URL: ${{ github.event.pull_request.html_url }}
           GH_TOKEN: ${{ secrets.RELEASE_TOKEN }}
