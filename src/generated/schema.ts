@@ -1409,6 +1409,47 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/presence": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Say whether a browser tab of the dashboard is being looked at
+         * @description The page calls this when its tab becomes visible or hidden
+         *     (`document.visibilityState`), when the person stops or resumes
+         *     using it, and on a slow heartbeat while it is visible. While at
+         *     least one tab is visible, has had input recently and keeps sending
+         *     heartbeats, the dashboard counts as in use and the scheduled
+         *     background refresh keeps running. When every tab has said it is
+         *     hidden, or has stopped sending heartbeats for three heartbeat
+         *     periods (a closed laptop, a crashed browser), the dashboard counts
+         *     as unused and, after the idle period, the scheduled refresh rests
+         *     (see `IDLE_AFTER`). A tab that becomes visible after the refresh
+         *     rested makes it run once.
+         *
+         *     This call is the only way the server learns whether a tab is
+         *     looked at. An open live stream says nothing about it, and neither
+         *     does a read carrying `X-Background-Read`. The call itself is not a
+         *     request that counts as use; only a visible report is.
+         *
+         *     A browser session only: a personal API token is refused with 403,
+         *     so a script cannot hold the refresh active.
+         *
+         *     The answer carries the two timings the page follows, so neither
+         *     is hard-coded in the browser.
+         */
+        post: operations["reportDashboardPresence"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/dashboard/refresh": {
         parameters: {
             query?: never;
@@ -1773,6 +1814,29 @@ export interface components {
             /** @description Only with `forge_error`, and only when the forge sent one (GitHub's `X-GitHub-Request-Id`). What the forge's support asks for. */
             requestId?: string;
         };
+        PresenceReport: {
+            /**
+             * @description Names one browser tab, chosen by the page when it loads. Not a
+             *     user id and not stored beyond the tab's heartbeats.
+             * @example 3f1c9a52-7d2e-4a6b-9f10-5b8e2c7d1a44
+             */
+            viewerId: string;
+            /**
+             * @description True while the tab is visible and has had input recently. False
+             *     once it is hidden or the person has stopped using it.
+             */
+            visible: boolean;
+        };
+        PresenceAnswer: {
+            /** @description How often a visible tab reports itself visible again. */
+            heartbeatSeconds: number;
+            /**
+             * @description How long a visible tab may go without input before it reports
+             *     `visible: false`. 0 means the server's idle mode is off and the
+             *     page never needs to.
+             */
+            idleAfterSeconds: number;
+        };
         RegisterBeginRequest: {
             /**
              * @description Surrounding whitespace is trimmed by the server, and what is
@@ -1827,8 +1891,14 @@ export interface components {
          *     whatever the frontend's `$lib/filters` `loadState`/`saveState` already produce
          *     client-side (shared forge/repo/label/author/title/created/
          *     updated/groupBy, plus the two board-owned extras with no
-         *     equivalent on the other entity type). This server stores and
-         *     returns it verbatim, byte for byte, and never parses or
+         *     equivalent on the other entity type). `shared.label` is one
+         *     lowercase label, or several lowercase labels separated by a
+         *     newline: the Label filter matches an item carrying any of
+         *     them, and a single label saved before it took several still
+         *     reads as a list of one. At most 20 labels and 1000 characters in
+         *     all, with no control character other than the separator; a
+         *     save over either is refused. This server stores and
+         *     returns it verbatim, byte for byte, and apart from the label limits never parses or
          *     validates its shape — the same "opaque blob, not this layer's
          *     concern" treatment WebAuthnCeremonyOptions above gets, so a
          *     client-side shape change here never needs a matching spec change.
@@ -2310,28 +2380,40 @@ export interface components {
          */
         CIStatus: "success" | "failure" | "pending" | "none";
         /**
-         * @description How many of a pull request's checks are in each state, so a client can
-         *     say how far a pipeline is without opening it. The server tallies
-         *     them from what it already reads to work out `ci`, so they cost no
-         *     request. Always present, all zero when there are no checks.
+         * @description How many checks are in each state, so a client can say how far a
+         *     pipeline is without opening it. It is on every pull request and on
+         *     every default branch, for a passed, a failed and a running pipeline
+         *     alike. The server tallies them from what it already reads to work out
+         *     the overall state, so they cost no request. Always present, all zero
+         *     when there are no checks.
          *
          *     `waiting` is a check that has not started: queued, or pending where the
-         *     forge doesn't tell queued from running. The counts agree with `ci`: a
-         *     pull request whose `ci` is `pending` has `failed` at 0, and one whose
-         *     `ci` is `success` has nothing running, waiting or failed. Two kinds of
-         *     run are therefore in none of the four. A run held for approval:
+         *     forge doesn't tell queued from running. A failed pipeline can still have
+         *     checks running or waiting, and says so. A pull request's counts agree
+         *     with its `ci`: one whose `ci` is `pending` has `failed` at 0, and one
+         *     whose `ci` is `success` has nothing running, waiting or failed. Two
+         *     kinds of run are therefore in none of the four, as long as something
+         *     else explains the state. A run held for approval: on a pull request
          *     `awaitingWorkflowApproval` says that. A cancelled run: a push or a
          *     concurrency group superseded it, and the overall state does not read it
-         *     as a failure while others still run. A timed-out or stale check counts
-         *     as `failed`, a skipped, neutral or bare completed one as `passed`.
+         *     as a failure while others still run. When cancelled runs (and, on a
+         *     branch, held ones) are the only reason a pipeline reads as failed, they
+         *     count as `failed` (a held run first, where both are there), so a failed
+         *     pipeline always has a failed count on GitHub. A branch whose status is
+         *     `cancelled` has `failed` at 0. A timed-out or stale check counts as `failed`, a skipped,
+         *     neutral or bare completed one as `passed`.
          *
-         *     On GitHub the counts come from the same rollup as `ci`; on Forgejo from
+         *     On GitHub the counts come from the same rollup as the overall state,
+         *     for a pull request and a branch alike; on Forgejo a pull request counts
          *     the statuses of the combined commit status, where nothing is ever
-         *     `running`. Forgejo answers one page of those statuses, and when its
-         *     total says there are more than the page holds the counts are all zero
-         *     rather than an undercount. When GitHub's rollup is of an earlier
-         *     commit than the head (a push still being processed), the counts are
-         *     zero too. GitHub's unauthenticated fallback has no such counts, so
+         *     `running`, and a default branch counts the workflow runs of the newest
+         *     commit that has one (a job count would cost a request per run), where a
+         *     running run is `running` and a queued or blocked one `waiting`. Forgejo
+         *     answers one page of those statuses, and when its total says there are
+         *     more than the page holds a pull request's counts are all zero rather
+         *     than an undercount. When GitHub's rollup of a pull request is of an
+         *     earlier commit than the head (a push still being processed), the counts
+         *     are zero too. GitHub's unauthenticated fallback has no such counts, so
          *     there they are all zero.
          */
         CheckCounts: {
@@ -2398,6 +2480,23 @@ export interface components {
              * @description The issue's page on its forge.
              */
             url: string;
+        };
+        /** @description One open pull request that will close an issue when it merges. */
+        LinkedPullRequest: {
+            forge: components["schemas"]["Forge"];
+            /** @description The pull request's repository as `owner/name`, which is not always the issue's own. */
+            repo: string;
+            number: number;
+            /** @description True while the pull request is a draft. Otherwise it is open. */
+            draft: boolean;
+            /**
+             * @description The address on this dashboard that opens the page listing the pull
+             *     request, with its pop-up open: `/pull-requests.html`, `/releases.html`
+             *     or `/bots.html`, whichever page lists that kind of pull request, then
+             *     `?pr=` and `forge/owner/name/number`. A relative address.
+             * @example /pull-requests.html?pr=github/alrayyes/hush-hush/12
+             */
+            pageUrl: string;
         };
         /** @description Who wrote a description or a comment. */
         Person: {
@@ -2890,9 +2989,8 @@ export interface components {
             readyToMerge: boolean;
             /**
              * @description True when CI is failing and not only because a workflow run is
-             *     held for approval: what the Failing CI quick filter and the status
-             *     filter's Failing choice list, and what the menu pill's Failed
-             *     number counts. Always present.
+             *     held for approval: what the Failing CI quick filter lists, and
+             *     what the menu pill's Failed number counts. Always present.
              */
             failingCi: boolean;
             /**
@@ -3216,6 +3314,17 @@ export interface components {
              */
             url: string;
             /**
+             * @description The open pull requests that will close the issue when they merge,
+             *     the other side of a pull request's `closesIssues`, ordered by
+             *     repository and number. Always present, and empty when there are
+             *     none. The server joins the pull requests it already holds, so it
+             *     costs the forge no request. It counts every open pull request the
+             *     user could see, including a draft and one they hid, but not one in
+             *     a repository whose pull requests they ignore. A pull request that
+             *     merged or closed is gone from the list on the next refresh.
+             */
+            linkedPullRequests: components["schemas"]["LinkedPullRequest"][];
+            /**
              * @description True for an issue a bot keeps open and rewrites, Renovate's
              *     "Dependency Dashboard", which is not work for a person. The
              *     server decides, so every client lists and counts the same
@@ -3456,6 +3565,15 @@ export interface components {
              *     the repository's `url`.
              */
             runUrl: string;
+            checks: components["schemas"]["CheckCounts"];
+            /**
+             * @description The repository's latest published release, for a link to its
+             *     notes. Null when the repository has none, when its only releases
+             *     are drafts or pre-releases, and for every Forgejo repository,
+             *     whose latest release is a separate read per repository that the
+             *     refresh does not make.
+             */
+            latestRelease: components["schemas"]["MainBranchRelease"] | null;
             /**
              * @description True when this row is the last known one because its forge
              *     couldn't be read or its rate limit is spent. A client offers no
@@ -3467,6 +3585,13 @@ export interface components {
              * @description When this row was last fetched. Null unless `stale`.
              */
             staleSince: string | null;
+        };
+        /** @description A repository's latest published release. */
+        MainBranchRelease: {
+            /** @description The release's tag, such as "v1.2.3". */
+            tag: string;
+            /** @description The release's own page on its forge. */
+            url: string;
         };
         /**
          * @description How many rows are in each status, the numbers on the filter pills.
@@ -3601,6 +3726,13 @@ export interface components {
     };
     responses: never;
     parameters: {
+        /**
+         * @description Any value says the read is the page's own timed refresh of its data,
+         *     not something a person asked for. Such a read does not count as use
+         *     of the dashboard, so a tab nobody is looking at cannot keep the
+         *     scheduled refresh running by polling.
+         */
+        HeaderBackgroundRead: string;
         PathUsername: string;
         PathWebhookToken: string;
         PathTokenID: string;
@@ -4316,7 +4448,7 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description The request body wasn't valid JSON, or exceeded the size this endpoint accepts. */
+            /** @description The request body wasn't valid JSON, exceeded the size this endpoint accepts, or its `shared.label` held more than 20 labels, more than 1000 characters, or a control character other than the newline between labels. */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -6360,7 +6492,15 @@ export interface operations {
                  */
                 includeHidden?: components["parameters"]["QueryIncludeHidden"];
             };
-            header?: never;
+            header?: {
+                /**
+                 * @description Any value says the read is the page's own timed refresh of its data,
+                 *     not something a person asked for. Such a read does not count as use
+                 *     of the dashboard, so a tab nobody is looking at cannot keep the
+                 *     scheduled refresh running by polling.
+                 */
+                "X-Background-Read"?: components["parameters"]["HeaderBackgroundRead"];
+            };
             path?: never;
             cookie?: never;
         };
@@ -6455,6 +6595,57 @@ export interface operations {
             };
             /** @description No background refresh is running yet for this user — Settings has never been saved. */
             404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
+    reportDashboardPresence: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PresenceReport"];
+            };
+        };
+        responses: {
+            /** @description The report was recorded. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PresenceAnswer"];
+                };
+            };
+            /** @description The body is not JSON, or `viewerId` or `visible` is missing or malformed. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description No valid session cookie was presented. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description A personal API token was presented. This call is for a browser session. */
+            403: {
                 headers: {
                     [name: string]: unknown;
                 };
