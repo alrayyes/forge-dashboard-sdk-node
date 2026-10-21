@@ -3917,6 +3917,19 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
+            /**
+             * @description Registration is closed: another registration on this empty
+             *     instance finished first and holds the instance's only passkey.
+             *     The pending account of this ceremony is removed.
+             */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
         };
     };
     beginLogin: {
