@@ -1631,7 +1631,8 @@ export interface paths {
          *     `ci_poll` (one repository, waiting on a running check),
          *     `auto_merge_poll` (one repository, waiting on an armed auto-merge),
          *     `details` (a dialog or check list opened), `hook_maintenance`
-         *     (checking, adding or upgrading webhooks), `user_action` (a button
+         *     (checking, adding or upgrading webhooks), `advisories` (reading a
+         *     repository's open Dependabot alerts), `user_action` (a button
          *     pressed, a queued action, or something the dashboard does for you such
          *     as auto-merge) and `unknown` (a request nobody tagged, which is a bug
          *     to report). A request that names no repository, such as listing an
@@ -2719,7 +2720,7 @@ export interface components {
             forge: components["schemas"]["Forge"];
             /** @description The credential the requests were made with, as a label with no secret and no user id. */
             credential: string;
-            /** @description Why the requests were made. Open-ended, so a new kind is not a breaking change; today `full`, `scoped_webhook`, `ci_poll`, `auto_merge_poll`, `details`, `hook_maintenance`, `user_action` and `unknown`. */
+            /** @description Why the requests were made. Open-ended, so a new kind is not a breaking change; today `full`, `scoped_webhook`, `ci_poll`, `auto_merge_poll`, `details`, `hook_maintenance`, `advisories`, `user_action` and `unknown`. */
             kind: string;
             /** @description The repository as `owner/name`, or empty when the request touched no single repository. `other` collects the repositories past the cap on how many are counted separately. */
             repo: string;
@@ -3645,7 +3646,35 @@ export interface components {
              * @description When this row was last fetched. Null unless `stale`.
              */
             staleSince: string | null;
+            advisories?: components["schemas"]["Advisories"];
         };
+        /**
+         * @description The open dependency advisories on a repository's default branch, read
+         *     from the forge's own source (GitHub's Dependabot alerts). Absent from
+         *     the row when no source reads them for its forge. A source that can't
+         *     answer, such as alerts switched off or a token without the
+         *     `security_events` scope, gives `state` "unknown", never a count of
+         *     zero.
+         */
+        Advisories: {
+            state: components["schemas"]["AdvisoryState"];
+            /** @description How many advisories are open. Only meaningful when `state` is "known". */
+            count: number;
+            highest?: components["schemas"]["AdvisorySeverity"];
+            /** @description Where to see the advisories on the forge. Absent when there are none or the state is unknown. */
+            url?: string;
+        };
+        /**
+         * @description "known" is an answer the forge gave. "unknown" is no answer, and must
+         *     never be shown as zero.
+         * @enum {string}
+         */
+        AdvisoryState: "known" | "unknown";
+        /**
+         * @description The worst severity among the open advisories. Absent when there are none.
+         * @enum {string}
+         */
+        AdvisorySeverity: "low" | "medium" | "high" | "critical";
         /** @description A repository's latest published release. */
         MainBranchRelease: {
             /** @description The release's tag, such as "v1.2.3". */
