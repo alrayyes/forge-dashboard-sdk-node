@@ -1098,6 +1098,42 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/releases/details": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Read a published release's title and notes, on demand
+         * @description What the release dialog on the Main branches page shows for a
+         *     repository's latest published release: its title, when it was
+         *     published, its notes and the thumbs reactions on them. Fetched live on
+         *     every call, never as part of GET /api/main-branches' snapshot, so a
+         *     release nobody opens costs no budget.
+         *
+         *     GitHub answers with one GraphQL query. Only GitHub rows carry a latest
+         *     release today, so a Forgejo repository is a 400.
+         *
+         *     The notes are Markdown exactly as the forge stores them (`format` is
+         *     always `markdown`). The server neither converts nor sanitises them, so
+         *     a client must render them with raw HTML disabled. They are cut at
+         *     20,000 characters (`truncated`), and a reaction names at most its
+         *     first 10 people while `count` is the full number.
+         *
+         *     The error answers are those of GET /api/pull-requests/details, with
+         *     the same codes. A tag that has no published release is a 404.
+         */
+        get: operations["getReleaseDetails"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/queued-actions": {
         parameters: {
             query?: never;
@@ -2570,6 +2606,17 @@ export interface components {
              *     app can't identify. Never an empty string.
              */
             releaseNotes: null | components["schemas"]["DetailsBody"];
+        };
+        /** @description What the release dialog shows for a published release. */
+        ReleaseDetails: {
+            tag: string;
+            /** @description The release's title. Empty when the forge has none, and then the tag is the title. */
+            name: string;
+            /** @description The release's page on the forge. */
+            url: string;
+            /** @description When it was published, RFC 3339. Empty when the forge didn't say. */
+            publishedAt: string;
+            notes: components["schemas"]["DetailsBody"];
         };
         /** @description What the issue dialog shows. */
         IssueDetails: {
@@ -6030,6 +6077,86 @@ export interface operations {
                 };
             };
             /** @description The forge reported the repo or issue doesn't exist (or isn't visible to this token). */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description The forge rate-limited the request. */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description The forge was unreachable, or answered with something this app couldn't classify more specifically. */
+            502: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
+    getReleaseDetails: {
+        parameters: {
+            query: {
+                forge: components["schemas"]["Forge"];
+                /** @description "owner/repo", matching a MainBranch.fullName from GET /api/main-branches. */
+                fullName: string;
+                /** @description Matching a MainBranchRelease.tag from GET /api/main-branches. */
+                tag: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The release's title and notes. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReleaseDetails"];
+                };
+            };
+            /** @description `tag` was empty, `fullName` wasn't "owner/repo", no credentials are saved for that forge, or that forge's client can't read releases. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description No valid session cookie or token was presented. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description The forge rejected the request as unauthorized: the saved token's scope doesn't cover reading this release. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description The forge reported the repo or release doesn't exist (or isn't visible to this token). */
             404: {
                 headers: {
                     [name: string]: unknown;
