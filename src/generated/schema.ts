@@ -719,6 +719,42 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/pull-requests/reopen": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Reopen one pull request that was closed without merging, on the signed-in user's behalf
+         * @description Reopens the named pull request: the undo for Close, offered in the
+         *     pull request's dialog right after a close. It does not offer a
+         *     reopen for a merged pull request, because the forge doesn't allow
+         *     one.
+         *
+         *     A closed pull request is not on the board, so no `allowedActions`
+         *     entry says in advance whether the forge will accept this. The call
+         *     is made and the forge decides. When it refuses, the server re-reads
+         *     the pull request and answers an `ActionError` (see Merge):
+         *     `already_merged` when it was merged in the meantime, and
+         *     `not_reopenable` when it is still closed and the forge won't
+         *     reopen it, usually because its branch was deleted or rewritten
+         *     after the close. Both are a 409 with a plain-words `message` that
+         *     says what to do next.
+         *
+         *     On success the pull request is listed on the board again from the
+         *     next refresh.
+         */
+        post: operations["reopenPullRequest"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/pull-requests/rerun-checks": {
         parameters: {
             query?: never;
@@ -1774,6 +1810,10 @@ export interface components {
              *     mean the dashboard's row was stale: the pull request has
              *     nothing left to merge.
              *
+             *     `not_reopenable` belongs to Reopen: the pull request is still
+             *     closed and the forge won't reopen it, usually because its
+             *     branch was deleted or rewritten after the close.
+             *
              *     `forge_error` means the forge failed on its own side (a 5xx):
              *     nothing is wrong with the request, so asking again may work.
              *     `upstreamStatus` and `requestId` then say what the forge
@@ -1793,7 +1833,7 @@ export interface components {
              *     auto-merge: already clean, use Merge).
              * @enum {string}
              */
-            code: "already_merged" | "already_closed" | "not_mergeable" | "conflict" | "behind" | "checks_pending" | "checks_failing" | "blocked_by_protection" | "already_up_to_date" | "auto_merge_not_allowed" | "ready_to_merge" | "permission" | "rate_limited" | "forge_error" | "not_rate_limited" | "not_open" | "unknown";
+            code: "already_merged" | "already_closed" | "not_mergeable" | "conflict" | "behind" | "checks_pending" | "checks_failing" | "blocked_by_protection" | "already_up_to_date" | "auto_merge_not_allowed" | "ready_to_merge" | "permission" | "rate_limited" | "forge_error" | "not_rate_limited" | "not_open" | "not_reopenable" | "unknown";
             /**
              * @description A short reason in plain words, safe to show a person, always.
              *     With `code: unknown` it is the forge's own sentence when that
@@ -5131,6 +5171,96 @@ export interface operations {
             };
             /** @description The forge reported the repo or pull request doesn't exist (or isn't visible to this token). `code` is `unknown`. */
             404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ActionError"];
+                };
+            };
+            /** @description The forge rate-limited the request. `code` is `rate_limited`; `resetsAt` carries when the budget comes back, when the forge said. */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ActionError"];
+                };
+            };
+            /** @description The forge was unreachable, or answered with something this app couldn't classify more specifically. */
+            502: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ActionError"];
+                };
+            };
+        };
+    };
+    reopenPullRequest: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PullRequestActionRequest"];
+            };
+        };
+        responses: {
+            /** @description Reopened. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /**
+             * @description The request body wasn't valid JSON, `fullName` wasn't
+             *     "owner/repo", no credentials are saved for that forge, or
+             *     that forge's client doesn't support reopening pull requests at
+             *     all.
+             */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description No valid session cookie was presented. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description The forge rejected the request as unauthorized — the saved token's scope doesn't cover reopening, or it isn't allowed to reopen on that repo. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ActionError"];
+                };
+            };
+            /** @description The forge reported the repo or pull request doesn't exist (or isn't visible to this token). `code` is `unknown`. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ActionError"];
+                };
+            };
+            /** @description The forge won't reopen it. `code` is `already_merged` or `not_reopenable`. */
+            409: {
                 headers: {
                     [name: string]: unknown;
                 };
