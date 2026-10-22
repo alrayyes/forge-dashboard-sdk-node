@@ -16,9 +16,9 @@ export interface paths {
          * @description Unauthenticated — a visitor deciding whether to show the login
          *     page's own "Register a new passkey instead" button has no session
          *     yet by definition. `open` is true only on a fresh instance with
-         *     zero registered users; once any account exists, self-registration
-         *     is closed and every registration after that requires a valid
-         *     `inviteToken` (see POST /api/auth/register/begin).
+         *     zero registered users; once any account holds a passkey,
+         *     registration is closed for good. More passkeys for that account are
+         *     added from Settings.
          */
         get: operations["getRegistrationStatus"];
         put?: never;
@@ -40,13 +40,10 @@ export interface paths {
         put?: never;
         /**
          * Start a passkey registration ceremony
-         * @description The very first registration on a fresh instance (zero registered
-         *     users — see GET /api/auth/registration-status) needs no
-         *     `inviteToken` and bootstraps that account as admin. Every
-         *     registration after that requires a valid, unexpired, unconsumed
-         *     `inviteToken` issued by an admin (POST /api/admin/invites) for
-         *     exactly this `username` — the invite's own `displayName` is what's
-         *     actually used, not this request's.
+         * @description An instance has one user. The first registration on a fresh
+         *     instance (see GET /api/auth/registration-status) creates that
+         *     user. Once any account holds a passkey, this answers 403 whatever
+         *     username it carries.
          */
         post: operations["beginRegistration"];
         delete?: never;
@@ -422,8 +419,8 @@ export interface paths {
          * @description Stops the token authenticating immediately. Idempotent — deleting
          *     an id that's already gone (or never belonged to the signed-in
          *     user) still answers 204, the same as any other delete-by-id
-         *     endpoint here (compare DELETE /api/admin/users/{username}), so a
-         *     double-click or a retried request isn't an error.
+         *     endpoint here, so a double-click or a retried request isn't an
+         *     error.
          */
         delete: operations["deleteAPIToken"];
         options?: never;
@@ -1205,125 +1202,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/admin/users": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * List every registered user
-         * @description Never includes a passkey or a forge credential — a username,
-         *     display name, admin flag and registration timestamp per user.
-         */
-        get: operations["listUsers"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/admin/users/{username}/revoke": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Revoke a user's passkeys and sessions
-         * @description Deletes every session and every registered passkey for this user —
-         *     they're signed out everywhere immediately, and have to register a
-         *     new passkey from scratch to get back in. Their saved forge
-         *     credentials are untouched; use the delete endpoint to remove the
-         *     account itself.
-         */
-        post: operations["revokeUser"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/admin/users/{username}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post?: never;
-        /**
-         * Remove a user outright
-         * @description Deletes the account, every session, every registered passkey, and
-         *     every saved forge credential — irreversible. Their username
-         *     becomes available for a fresh registration.
-         */
-        delete: operations["deleteUser"];
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/admin/invites": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * List outstanding registration invites
-         * @description Every invite that's neither consumed nor expired — never the raw
-         *     token, only its own stable id (see AdminInvite).
-         */
-        get: operations["listInvites"];
-        put?: never;
-        /**
-         * Generate a new single-use registration invite
-         * @description The admin picks the username and display name up front — the
-         *     invitee only completes the WebAuthn ceremony at the link this
-         *     returns (`/login?invite=<token>`, built client-side). Valid for
-         *     one hour, fixed.
-         */
-        post: operations["createInvite"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/admin/invites/{token}/revoke": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Revoke an outstanding invite
-         * @description Stops the invite's token from ever completing a registration.
-         *     `token` here is an invite's own `id` (from AdminInvite's own
-         *     listing), never the raw secret an invitee would use to register —
-         *     that's AdminInviteCreateResponse's own `token` field, and it's
-         *     never listed again after creation.
-         */
-        post: operations["revokeInvite"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/readyz": {
         parameters: {
             query?: never;
@@ -1862,21 +1740,8 @@ export interface components {
              * @example ryan
              */
             username: string;
-            /**
-             * @description Ignored once an invite is required (any account already
-             *     exists) — the invite's own displayName (set by the admin who
-             *     issued it) is what's actually used. Only the very first,
-             *     bootstrap registration on a fresh instance takes this value.
-             * @example Ryan
-             */
+            /** @example Ryan */
             displayName: string;
-            /**
-             * @description Required once any account already exists (see GET
-             *     /api/auth/registration-status) — a single-use token from POST
-             *     /api/admin/invites, issued for exactly this username. Omitted
-             *     or ignored for the very first, bootstrap registration.
-             */
-            inviteToken?: string;
         };
         RegistrationStatus: {
             /** @description True only when the instance has zero registered users. */
@@ -1926,56 +1791,6 @@ export interface components {
         SessionUser: {
             username: string;
             displayName: string;
-            isAdmin: boolean;
-        };
-        AdminUser: {
-            username: string;
-            displayName: string;
-            isAdmin: boolean;
-            /** Format: date-time */
-            createdAt: string;
-        };
-        /**
-         * @description An outstanding (unconsumed, unexpired) invite's own metadata —
-         *     never the raw token, which only AdminInviteCreateResponse ever
-         *     carries, once, at creation time.
-         */
-        AdminInvite: {
-            /**
-             * @description The invite's own stable identifier — pass this back to POST
-             *     /api/admin/invites/{token}/revoke, not the raw token an
-             *     invitee registers with.
-             */
-            id: string;
-            username: string;
-            displayName: string;
-            /** Format: date-time */
-            expiresAt: string;
-        };
-        AdminInviteCreateRequest: {
-            /**
-             * @description Surrounding whitespace is trimmed by the server, and what is
-             *     left must not be empty. Clients may check the same pattern for
-             *     quick feedback; the server decides.
-             * @example alex
-             */
-            username: string;
-            /** @example Alex */
-            displayName: string;
-        };
-        /**
-         * @description The one and only response that ever carries the raw invite token
-         *     — shown to the admin once, at creation time, for them to copy
-         *     into a `/login?invite=<token>` link and hand to the invitee out
-         *     of band. Only its hash is stored, so it can't be recovered from
-         *     here again.
-         */
-        AdminInviteCreateResponse: {
-            token: string;
-            username: string;
-            displayName: string;
-            /** Format: date-time */
-            expiresAt: string;
         };
         /**
          * @description The signed-in user's own GitHub/Forgejo configuration. Never
@@ -3816,7 +3631,6 @@ export interface components {
          *     scheduled refresh running by polling.
          */
         HeaderBackgroundRead: string;
-        PathUsername: string;
         PathWebhookToken: string;
         PathTokenID: string;
         /**
@@ -3888,21 +3702,8 @@ export interface operations {
                     "application/json": components["schemas"]["WebAuthnCeremonyOptions"];
                 };
             };
-            /**
-             * @description Self-registration is closed (an account already exists) and
-             *     no valid, unexpired, unconsumed invite for this username was
-             *     presented.
-             */
+            /** @description Registration is closed: an account already holds a passkey. */
             403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["Error"];
-                };
-            };
-            /** @description That username is already registered. */
-            409: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -6330,301 +6131,6 @@ export interface operations {
                 };
             };
             /** @description No such queued action for this user. */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["Error"];
-                };
-            };
-        };
-    };
-    listUsers: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Every registered user. */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["AdminUser"][];
-                };
-            };
-            /** @description No valid session cookie was presented. */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["Error"];
-                };
-            };
-            /** @description The signed-in user isn't the designated admin. */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["Error"];
-                };
-            };
-        };
-    };
-    revokeUser: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                username: components["parameters"]["PathUsername"];
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Revoked. */
-            204: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description An admin can't revoke their own account through this endpoint. */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["Error"];
-                };
-            };
-            /** @description No valid session cookie was presented. */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["Error"];
-                };
-            };
-            /** @description The signed-in user isn't the designated admin. */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["Error"];
-                };
-            };
-            /** @description No user is registered under that username. */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["Error"];
-                };
-            };
-        };
-    };
-    deleteUser: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                username: components["parameters"]["PathUsername"];
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Removed. */
-            204: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description An admin can't remove their own account through this endpoint. */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["Error"];
-                };
-            };
-            /** @description No valid session cookie was presented. */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["Error"];
-                };
-            };
-            /** @description The signed-in user isn't the designated admin. */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["Error"];
-                };
-            };
-            /** @description No user is registered under that username. */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["Error"];
-                };
-            };
-        };
-    };
-    listInvites: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Every outstanding invite. */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["AdminInvite"][];
-                };
-            };
-            /** @description No valid session cookie was presented. */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["Error"];
-                };
-            };
-            /** @description The signed-in user isn't the designated admin. */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["Error"];
-                };
-            };
-        };
-    };
-    createInvite: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["AdminInviteCreateRequest"];
-            };
-        };
-        responses: {
-            /** @description Created — the only response that ever carries the raw token. */
-            201: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["AdminInviteCreateResponse"];
-                };
-            };
-            /** @description username or displayName was blank. */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["Error"];
-                };
-            };
-            /** @description No valid session cookie was presented. */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["Error"];
-                };
-            };
-            /** @description The signed-in user isn't the designated admin. */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["Error"];
-                };
-            };
-            /** @description That username is already registered. */
-            409: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["Error"];
-                };
-            };
-        };
-    };
-    revokeInvite: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                token: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Revoked. */
-            204: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description No valid session cookie was presented. */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["Error"];
-                };
-            };
-            /** @description The signed-in user isn't the designated admin. */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["Error"];
-                };
-            };
-            /** @description No outstanding invite with that id. */
             404: {
                 headers: {
                     [name: string]: unknown;
