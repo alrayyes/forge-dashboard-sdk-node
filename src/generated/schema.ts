@@ -1471,6 +1471,38 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/checks/log": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Read the output of one CI job, on demand
+         * @description The output behind a `Check` that carries a `jobId`, as plain text: colour
+         *     codes and carriage returns removed, never markup, so a client must render
+         *     it as text. Whatever the forge already masks stays masked. Only the last
+         *     256 KiB are returned; `truncated` says the start was cut.
+         *
+         *     Fetched live on every call and never as part of a snapshot, since a log
+         *     can be large and most are never opened. GitHub reads the job's log
+         *     through its REST API (one request, then a short-lived download). Forgejo
+         *     reads it through the job logs endpoint of its Actions API.
+         *
+         *     A forge can refuse: the token may not read logs, the log may have
+         *     expired, or the check may not be an Actions job at all. Those answer 403
+         *     or 404 with a sentence a person can read.
+         */
+        get: operations["getCheckLog"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/main-branches/checks": {
         parameters: {
             query?: never;
@@ -2276,6 +2308,12 @@ export interface components {
             /** @description That job's own page on the forge that ran it — never the pull request's own page. */
             url: string;
             /**
+             * @description The Actions job (or check run) id to pass to GET /api/checks/log.
+             *     Absent for a legacy commit status and for a workflow held for
+             *     approval, which have no output to read.
+             */
+            jobId?: number;
+            /**
              * @description Whether the base branch's protection makes this check block the
              *     merge (GitHub required status checks and rulesets, Forgejo
              *     `status_check_contexts`). Absent when the forge can't tell — a
@@ -2300,11 +2338,17 @@ export interface components {
              *     with per-line timestamps and colour codes removed, at most 2,000
              *     characters. Never markup, and a client must render it as text.
              *     Whatever the forge already masks stays masked. Absent when the
-             *     log can't be read or has expired. GitHub only: Forgejo's API
-             *     doesn't serve job logs, so there the link to the run is all a
-             *     failed check offers.
+             *     log can't be read or has expired. GitHub only: for Forgejo the
+             *     whole output is read through GET /api/checks/log.
              */
             excerpt?: string;
+        };
+        /** @description The output of one CI job. */
+        CheckLog: {
+            /** @description Plain text, never markup. A client must render it as text. */
+            text: string;
+            /** @description True when the start of the output was cut to fit the size cap. */
+            truncated: boolean;
         };
         /** @description One issue a pull request will close when it merges. */
         ClosingIssue: {
@@ -6492,6 +6536,86 @@ export interface operations {
             };
             /** @description No valid session cookie was presented. */
             401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
+    getCheckLog: {
+        parameters: {
+            query: {
+                forge: components["schemas"]["Forge"];
+                /** @description "owner/repo" of the repository the check ran in. */
+                fullName: string;
+                /** @description Matching a Check.jobId. */
+                jobId: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The job's output. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CheckLog"];
+                };
+            };
+            /** @description `fullName` wasn't "owner/repo", `jobId` wasn't a positive integer, no credentials are saved for that forge, or that forge's client can't read job logs. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description No valid session cookie or token was presented. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description The saved token's scope doesn't cover reading job logs, or it isn't allowed to see that repo. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description The forge has no such job or log (it expired, or the check isn't an Actions job). */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description The forge rate-limited the request. */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description The forge was unreachable, or answered with something this app couldn't classify more specifically. */
+            502: {
                 headers: {
                     [name: string]: unknown;
                 };
