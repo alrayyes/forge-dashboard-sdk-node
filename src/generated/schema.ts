@@ -3686,6 +3686,15 @@ export interface components {
              */
             webhookNeedsToken?: boolean;
             /**
+             * Format: date-time
+             * @description Present when the last fetch of this repository failed, and the
+             *     time of the first failure in the run it is still part of. Its
+             *     pull requests and issues are then the last good ones. Absent
+             *     when the repository is fetching fine. It is not saved, so it
+             *     restarts from the first failure after a restart.
+             */
+            failingSince?: string;
+            /**
              * @description Whether the signed-in user has turned on automatic branch
              *     updates for this repo — any of its pull requests the
              *     background refresh finds behind its base branch gets updated
