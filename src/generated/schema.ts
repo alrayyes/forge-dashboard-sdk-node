@@ -2531,6 +2531,13 @@ export interface components {
         };
         /** @description What the issue dialog shows. */
         IssueDetails: {
+            /**
+             * @description Whether the forge has the issue open or closed right now. The
+             *     dialog draws its status from this, so an issue closed or reopened
+             *     while the dialog is open shows the change.
+             * @enum {string}
+             */
+            state: "open" | "closed";
             description: components["schemas"]["DetailsBody"];
             /** @description The conversation, oldest first, at most the first 50. */
             comments: components["schemas"]["DetailsComment"][];
