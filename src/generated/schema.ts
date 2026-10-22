@@ -1420,6 +1420,11 @@ export interface paths {
          *     or branch update to show the result, and a refusal there would
          *     leave the row stale. Only a call that actually fetched answers
          *     without the header.
+         *
+         *     The same goes for a call made while the first refresh since the
+         *     server started is still running: it answers at once with the
+         *     current snapshot and `Retry-After`, instead of waiting for that
+         *     refresh to finish.
          */
         post: operations["refreshDashboard"];
         delete?: never;
@@ -6574,13 +6579,15 @@ export interface operations {
         responses: {
             /**
              * @description The freshly refreshed snapshot, or, when `Retry-After` is
-             *     present, the current one because the cooldown hadn't passed.
+             *     present, the current one because the cooldown hadn't passed or the
+             *     first refresh since start-up is still running.
              */
             200: {
                 headers: {
                     /**
                      * @description Seconds until a refresh fetches again. Present only when
-                     *     this call was inside the cooldown and returned the current
+                     *     this call was inside the cooldown, or the first refresh since
+                     *     start-up was still running, and returned the current
                      *     snapshot without fetching.
                      */
                     "Retry-After"?: number;
