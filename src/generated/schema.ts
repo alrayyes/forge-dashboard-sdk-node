@@ -6273,7 +6273,7 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description No such queued action for this user. */
+            /** @description No such queued action. */
             404: {
                 headers: {
                     [name: string]: unknown;
@@ -6488,7 +6488,7 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description No background refresh is running yet for this user — Settings has never been saved. */
+            /** @description No background refresh is running yet — Settings has never been saved. */
             404: {
                 headers: {
                     [name: string]: unknown;
@@ -6606,7 +6606,7 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description No background refresh is running yet for this user — Settings has never been saved. */
+            /** @description No background refresh is running yet — Settings has never been saved. */
             404: {
                 headers: {
                     [name: string]: unknown;
