@@ -3604,6 +3604,8 @@ export interface components {
              */
             generatedAt: string;
             counts: components["schemas"]["MainBranchCounts"];
+            /** @description Each forge's health as of the last refresh, the same as the dashboard's. A client uses it to hold back an action that a forge which can't be reached, or whose rate limit is spent, would probably refuse. The budget can run out between refreshes, so the forge still has the final say. */
+            forges: components["schemas"]["ForgeHealth"][];
             branches: components["schemas"]["MainBranch"][];
         };
         /**
