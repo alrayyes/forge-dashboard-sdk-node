@@ -2367,6 +2367,13 @@ export interface components {
              */
             durationSeconds?: number;
             /**
+             * @description Which attempt of its workflow run the job belongs to. Forgejo
+             *     only: it keeps a job's id and page when a run is retried, so this
+             *     is what tells a retry's output from the first attempt's. Absent
+             *     when the forge doesn't number attempts.
+             */
+            runAttempt?: number;
+            /**
              * @description The name of the step of a failed job that broke. Absent when
              *     the check isn't a job the token can read (a third-party check,
              *     a forge with no step data, a token without access).
@@ -2377,8 +2384,10 @@ export interface components {
              *     with per-line timestamps and colour codes removed, at most 2,000
              *     characters. Never markup, and a client must render it as text.
              *     Whatever the forge already masks stays masked. Absent when the
-             *     log can't be read or has expired. GitHub only: for Forgejo the
-             *     whole output is read through GET /api/checks/log.
+             *     log can't be read or has expired. Both forges fill it for at
+             *     most five failed jobs of a list: on GitHub the first five in the
+             *     list's order, on Forgejo up to five, newest first. The whole output is read
+             *     through GET /api/checks/log.
              */
             excerpt?: string;
         };
