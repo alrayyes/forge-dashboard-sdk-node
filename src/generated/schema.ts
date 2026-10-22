@@ -3554,6 +3554,7 @@ export interface components {
             highest?: components["schemas"]["AdvisorySeverity"];
             /** @description Where to see the advisories on the forge. Absent when there are none or the state is unknown. */
             url?: string;
+            reason?: components["schemas"]["AdvisoryReason"];
         };
         /**
          * @description "known" is an answer the forge gave. "unknown" is no answer, and must
@@ -3561,6 +3562,16 @@ export interface components {
          * @enum {string}
          */
         AdvisoryState: "known" | "unknown";
+        /**
+         * @description Why `state` is "unknown", when the dashboard can tell. Absent when
+         *     the state is "known". "refused" is a 403: the credential lacks the
+         *     Dependabot alerts permission. "switched_off" is a 404: alerts are off
+         *     for the repository. "throttled" is a rate limit, which clears by
+         *     itself. "failed" is any other error reading the alerts. "too_many" is
+         *     a repository with more open alerts than one read pages through.
+         * @enum {string}
+         */
+        AdvisoryReason: "refused" | "switched_off" | "throttled" | "failed" | "too_many";
         /**
          * @description The worst severity among the open advisories. Absent when there are none.
          * @enum {string}
