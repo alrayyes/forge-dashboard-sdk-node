@@ -1599,7 +1599,7 @@ export interface paths {
          *     `auto_merge_poll` (one repository, waiting on an armed auto-merge),
          *     `details` (a dialog or check list opened), `hook_maintenance`
          *     (checking, adding or upgrading webhooks), `advisories` (reading a
-         *     repository's open Dependabot alerts), `user_action` (a button
+         *     repository's open Dependabot alerts, or a Forgejo repository's lockfiles), `user_action` (a button
          *     pressed, a queued action, or something the dashboard does for you such
          *     as auto-merge) and `unknown` (a request nobody tagged, which is a bug
          *     to report). A request that names no repository, such as listing an
@@ -3551,8 +3551,10 @@ export interface components {
         };
         /**
          * @description The open dependency advisories on a repository's default branch, read
-         *     from the forge's own source (GitHub's Dependabot alerts). Absent from
-         *     the row when no source reads them for its forge. A source that can't
+         *     from GitHub's Dependabot alerts, or for a Forgejo repository from the
+         *     packages in its lockfiles matched against OSV, when the operator has
+         *     switched that on. Absent from the row when no source reads them for its
+         *     forge. A source that can't
          *     answer, such as alerts switched off or a token without the
          *     `security_events` scope, gives `state` "unknown", never a count of
          *     zero.
@@ -3562,7 +3564,7 @@ export interface components {
             /** @description How many advisories are open. Only meaningful when `state` is "known". */
             count: number;
             highest?: components["schemas"]["AdvisorySeverity"];
-            /** @description Where to see the advisories on the forge. Absent when there are none or the state is unknown. */
+            /** @description Where to see the advisories on the forge. Absent when there are none or the state is unknown, and for Forgejo, which has no page for them. */
             url?: string;
             reason?: components["schemas"]["AdvisoryReason"];
         };
@@ -3578,10 +3580,14 @@ export interface components {
          *     Dependabot alerts permission. "switched_off" is a 404: alerts are off
          *     for the repository. "throttled" is a rate limit, which clears by
          *     itself. "failed" is any other error reading the alerts. "too_many" is
-         *     a repository with more open alerts than one read pages through.
+         *     a repository with more open alerts than one read pages through. On a
+         *     Forgejo repository, "not_enabled" is the operator not having switched
+         *     on lockfile checking (it is off by default, since it sends package
+         *     names to a third party), absent when it has no lockfile the dashboard
+         *     reads, and "failed" when one is too big or doesn't parse.
          * @enum {string}
          */
-        AdvisoryReason: "refused" | "switched_off" | "throttled" | "failed" | "too_many";
+        AdvisoryReason: "refused" | "switched_off" | "throttled" | "failed" | "too_many" | "not_enabled";
         /**
          * @description The worst severity among the open advisories. Absent when there are none.
          * @enum {string}
