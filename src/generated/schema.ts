@@ -1485,6 +1485,9 @@ export interface paths {
          *     it as text. Whatever the forge already masks stays masked. Only the last
          *     256 KiB are returned; `truncated` says the start was cut.
          *
+         *     Only for a repository the dashboard tracks for you; any other answers 404
+         *     without asking the forge.
+         *
          *     Fetched live on every call and never as part of a snapshot, since a log
          *     can be large and most are never opened. GitHub reads the job's log
          *     through its REST API (one request, then a short-lived download). Forgejo
@@ -6640,7 +6643,7 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description The forge has no such job or log (it expired, or the check isn't an Actions job). */
+            /** @description The repository isn't one the dashboard tracks for you, or the forge has no such job or log (it expired, or the check isn't an Actions job). */
             404: {
                 headers: {
                     [name: string]: unknown;
@@ -6660,6 +6663,15 @@ export interface operations {
             };
             /** @description The forge was unreachable, or answered with something this app couldn't classify more specifically. */
             502: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description The dashboard has not loaded your repositories yet (a cold start or an outage), so it cannot say whether the repository is tracked. Retry shortly. */
+            503: {
                 headers: {
                     [name: string]: unknown;
                 };
