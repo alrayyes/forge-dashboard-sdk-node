@@ -1543,6 +1543,35 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/main-branches/rerun-checks": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Rerun only the failed jobs of a repository's default-branch pipeline, on the signed-in user's behalf
+         * @description The branch twin of POST /api/pull-requests/rerun-checks. Asks the forge
+         *     to rerun the failed jobs of the Actions workflow runs on the commit
+         *     GET /api/main-branches/checks lists, and nothing that passed. It
+         *     answers once the forge has queued them, not when they finish, so a
+         *     client shows a queued state and lets the next refresh carry the result.
+         *
+         *     A Main branches row offers it when its `status` is `failed`. A failed
+         *     check that isn't an Actions job (a third-party check, a legacy status,
+         *     an external CI) can't be rerun here and is skipped. Refusals are an
+         *     `ActionError`; a 409 means the branch has no failed job to rerun.
+         */
+        post: operations["rerunMainBranchChecks"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/stats/forge-api": {
         parameters: {
             query?: never;
@@ -2197,6 +2226,12 @@ export interface components {
             fullName: string;
             /** @description Matching a PullRequest.number from GET /api/dashboard. */
             number: number;
+        };
+        /** @description Which repository's default branch to rerun the failed checks of. */
+        MainBranchRerunRequest: {
+            forge: components["schemas"]["Forge"];
+            /** @description "owner/repo", matching a MainBranch.fullName from GET /api/main-branches. */
+            fullName: string;
         };
         /**
          * @description Which pull request to hide, and for how long. Without `days` it stays
@@ -6699,6 +6734,91 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
+    rerunMainBranchChecks: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MainBranchRerunRequest"];
+            };
+        };
+        responses: {
+            /** @description The failed jobs were queued to rerun. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description The request body wasn't valid JSON, `fullName` wasn't "owner/repo", no credentials are saved for that forge, or that forge's client doesn't support rerunning default branch checks. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description No valid session cookie or token was presented. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description The forge rejected the request as unauthorized. The saved token can't write to Actions on that repo. `code` is `permission`. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ActionError"];
+                };
+            };
+            /** @description The repo isn't one whose default branch the dashboard tracks, or the forge reported it doesn't exist (or isn't visible to this token). For the forge's answer `code` is `unknown`. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ActionError"];
+                };
+            };
+            /** @description There is no failed Actions job to rerun on the default branch. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ActionError"];
+                };
+            };
+            /** @description The forge rate-limited the request. `code` is `rate_limited`; `resetsAt` carries when the budget comes back, when the forge said. */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ActionError"];
+                };
+            };
+            /** @description The forge was unreachable, or answered with something this app couldn't classify more specifically. */
+            502: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ActionError"];
                 };
             };
         };
