@@ -789,6 +789,54 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/checks/cancel-run": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Cancel one running or queued Actions workflow run, on the signed-in user's behalf
+         * @description Asks the forge to cancel a whole workflow run: every job of it stops,
+         *     because neither GitHub nor Forgejo can stop one job of a running
+         *     workflow. A client takes `runId` from a check in a checks list
+         *     (`GET /api/pull-requests/checks` or `GET /api/main-branches/checks`),
+         *     where a job that is still queued or running carries the id and name of
+         *     its run. A check with no `runId` (a third-party check, a legacy commit
+         *     status, an external CI) belongs to no Actions run and can't be
+         *     cancelled here.
+         *
+         *     It answers once the forge has accepted the cancel, not when the run
+         *     has stopped, so a client shows the run as cancelling and lets the next
+         *     snapshot carry the result. A pull request offers it as a `cancel_run`
+         *     entry in `allowedActions` while any of its checks is running or
+         *     waiting, even when another check has already failed. The list can't
+         *     tell an Actions check from an external CI, so a pull request whose
+         *     only running check is an external one (on Forgejo, a pending commit
+         *     status too) still offers it, and the checks list then has no `runId`
+         *     to send.
+         *
+         *     It is never queued for a rate-limit reset. After the reset the run may
+         *     be a different one, started by a newer push, and a cancel can't be
+         *     undone. A rate limit arrives as a 429 and the person decides again.
+         *
+         *     Refusals are an `ActionError` (see Merge) and carry the forge's own
+         *     plain-words `message`: the token may not write to Actions, the run
+         *     already finished, or a Forgejo instance too old to have the route.
+         *     An old Forgejo answers the missing route with a 404, which looks the
+         *     same as a run that is gone, so it is reported as that and doesn't
+         *     stop the dialog offering the action.
+         */
+        post: operations["cancelWorkflowRun"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/pull-requests/hide": {
         parameters: {
             query?: never;
@@ -2538,6 +2586,24 @@ export interface components {
              */
             jobId?: number;
             /**
+             * @description The Actions workflow run this job belongs to, to pass to
+             *     `POST /api/checks/cancel-run`. Present only while the job is
+             *     queued or running, and only for an Actions job: a finished job,
+             *     a third-party check and a legacy commit status have none, and
+             *     nothing is left to cancel.
+             *
+             *     A Forgejo run whose jobs couldn't be read is listed as one check
+             *     named for the run, with a `runId` and no `jobId`. A client treats
+             *     a check with a `runId` and no `jobId` as the run itself, not as a
+             *     job of it, and doesn't list its name among the run's jobs.
+             */
+            runId?: number;
+            /**
+             * @description The name of that workflow run, for a client to say which run a
+             *     cancel stops. Present with `runId`.
+             */
+            runName?: string;
+            /**
              * @description Whether the base branch's protection makes this check block the
              *     merge (GitHub required status checks and rulesets, Forgejo
              *     `status_check_contexts`). Absent when the forge can't tell — a
@@ -3355,6 +3421,13 @@ export interface components {
             number: number;
             /** Format: uri */
             url: string;
+        };
+        CancelRunRequest: {
+            forge: components["schemas"]["Forge"];
+            /** @description The repository, as "owner/repo". */
+            fullName: string;
+            /** @description The workflow run to cancel, from a check's `runId`. */
+            runId: number;
         };
         AllowedAction: {
             /**
@@ -5610,6 +5683,96 @@ export interface operations {
                 };
             };
             /** @description There is no failed Actions job to rerun ("no failed job to rerun"), or the pull request was already merged or closed. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ActionError"];
+                };
+            };
+            /** @description The forge rate-limited the request. `code` is `rate_limited`; `resetsAt` carries when the budget comes back, when the forge said. */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ActionError"];
+                };
+            };
+            /** @description The forge was unreachable, or answered with something this app couldn't classify more specifically. */
+            502: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ActionError"];
+                };
+            };
+        };
+    };
+    cancelWorkflowRun: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CancelRunRequest"];
+            };
+        };
+        responses: {
+            /** @description The forge accepted the cancel. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /**
+             * @description The request body wasn't valid JSON, `runId` wasn't a positive
+             *     integer, `fullName` wasn't "owner/repo", no credentials are saved
+             *     for that forge, or that forge's client doesn't support cancelling
+             *     a run.
+             */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description No valid session cookie was presented. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description The forge rejected the request as unauthorized. The saved token can't write to Actions on that repo. `code` is `permission`. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ActionError"];
+                };
+            };
+            /** @description The dashboard doesn't track that repository (it dropped off the board since the checks were read), so the forge wasn't asked; or the forge reported the repo or run doesn't exist, or the instance has no cancel route. `code` is `unknown` for both. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ActionError"];
+                };
+            };
+            /** @description The run has already finished, or the forge otherwise can't cancel it now. */
             409: {
                 headers: {
                     [name: string]: unknown;
