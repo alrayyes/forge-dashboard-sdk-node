@@ -3720,6 +3720,16 @@ export interface components {
             /** @description Where to see the advisories on the forge. Absent when there are none or the state is unknown, and for Forgejo, which has no page for them. */
             url?: string;
             reason?: components["schemas"]["AdvisoryReason"];
+            /**
+             * @description Only on a Forgejo repository whose `state` is "known": its lock
+             *     files list packages the dashboard leaves out because they are not
+             *     public (a private registry, a git or path source, a module on the
+             *     forge's own host), so `count` covers only the rest. Read it as
+             *     "at least this many", and a count of zero as "none found among
+             *     what was checked", not "none". Absent when the answer covers every
+             *     package the lock files list.
+             */
+            partial?: boolean;
         };
         /**
          * @description "known" is an answer the forge gave. "unknown" is no answer, and must
@@ -3737,7 +3747,9 @@ export interface components {
          *     Forgejo repository, "not_enabled" is the operator not having switched
          *     on lockfile checking (it is off by default, since it sends package
          *     names to a third party), absent when it has no lockfile the dashboard
-         *     reads, and "failed" when one is too big or doesn't parse.
+         *     reads, and "failed" when one is too big or doesn't parse. A Forgejo
+         *     repository whose advisories have not been read yet, because its first
+         *     read is still running in the background, is "unknown" with no reason.
          * @enum {string}
          */
         AdvisoryReason: "refused" | "switched_off" | "throttled" | "failed" | "too_many" | "not_enabled";
