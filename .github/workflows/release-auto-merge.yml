@@ -30,6 +30,13 @@ jobs:
       # conflict, a required check still pending) is a real failure and
       # stops the job with GitHub's own message, and GitHub refuses the
       # direct merge too if a required check is not done.
+      #
+      # Two things this relies on. The case patterns below match GitHub's
+      # free-form refusal wording ("is in unstable status"), so if GitHub
+      # rewords it the job fails loudly rather than merging; the tests pin the
+      # current wording. And the direct merge is only safe while branch
+      # protection keeps `enforce_admins` on, because then the token gets no
+      # bypass and a pending or failing required check blocks the merge.
       # https://docs.github.com/en/pull-requests/collaborating-with-pull-requests/incorporating-changes-from-a-pull-request/automatically-merging-a-pull-request
       - name: Merge the release PR
         run: |

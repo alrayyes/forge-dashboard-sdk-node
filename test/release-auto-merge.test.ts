@@ -164,6 +164,21 @@ describe("release-auto-merge step", () => {
     );
   });
 
+  test("fails on a refusal that only mentions 'unstable' in passing", async () => {
+    // The match is on GitHub's refusal sentence, not the bare word: a check
+    // named "unstable-tests" in an unrelated refusal must not trigger a merge.
+    const result = await run({
+      auto: {
+        out: "X Pull request alrayyes/forge-dashboard-sdk-node#180 is not mergeable: check unstable-tests is expected.",
+        rc: 1,
+      },
+      direct: ok,
+    });
+
+    expect(result.code).not.toBe(0);
+    expect(result.calls).toHaveLength(1);
+  });
+
   test("fails when the direct merge is refused (a required check is not done)", async () => {
     const result = await run({
       auto: { out: UNSTABLE, rc: 1 },
