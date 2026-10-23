@@ -1661,6 +1661,46 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/main-branches/advisories": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List a repository's open dependency advisories in full, on demand
+         * @description What the advisories dialog on the Main branches page shows for one
+         *     repository: each open Dependabot alert with the fields GitHub's own
+         *     alert page shows. The list and the detail view are the same answer, so
+         *     opening one advisory costs no second call. Fetched live on every call,
+         *     never as part of GET /api/main-branches' snapshot, so a repository
+         *     nobody opens costs no budget.
+         *
+         *     Sorted by severity, highest first, then newest first. Only GitHub reads
+         *     them, through the Dependabot alerts of the repository; a Forgejo
+         *     repository is a 400.
+         *
+         *     A forge that can't say is a 200 with `state` "unknown", an empty list
+         *     and the `reason`, the same words as the row's own `advisories`: alerts
+         *     switched off, a credential without the Dependabot alerts permission, a
+         *     rate limit, any other failure, or a repository with more open alerts
+         *     than one read pages through. An empty `known` list means nothing is
+         *     open.
+         *
+         *     `description` is Markdown exactly as GitHub stores it, so a client must
+         *     render it with raw HTML disabled. A field GitHub didn't send is left
+         *     out.
+         */
+        get: operations["listAdvisories"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/main-branches/rerun-checks": {
         parameters: {
             query?: never;
@@ -3758,6 +3798,70 @@ export interface components {
          * @enum {string}
          */
         AdvisorySeverity: "low" | "medium" | "high" | "critical";
+        /** @description A repository's open dependency advisories in full. */
+        AdvisoryList: {
+            state: components["schemas"]["AdvisoryState"];
+            reason?: components["schemas"]["AdvisoryReason"];
+            /** @description The repository's advisories page on the forge. Absent when none are open or the state is unknown. */
+            url?: string;
+            /** @description Empty when none are open and whenever `state` is "unknown". Highest severity first, then newest first. */
+            advisories: components["schemas"]["AdvisoryItem"][];
+        };
+        /** @description One open Dependabot alert with the fields GitHub's alert page shows. */
+        AdvisoryItem: {
+            /** @description The alert's number on the forge. */
+            number: number;
+            /** @description The alert's state on the forge. Always "open" here. */
+            state: string;
+            severity?: components["schemas"]["AdvisorySeverity"];
+            /** @description The advisory's one-line title. */
+            summary: string;
+            ghsaId?: string;
+            cveId?: string;
+            /** @description The vulnerable dependency's name. */
+            package?: string;
+            /** @description The package ecosystem, such as "npm" or "pip". */
+            ecosystem?: string;
+            /** @description Whether the dependency is needed at runtime or only in development. */
+            scope?: string;
+            /** @description Whether the dependency is direct or transitive. Absent when GitHub didn't say. */
+            relationship?: string;
+            /** @description The file the dependency was detected in. */
+            manifestPath?: string;
+            /** Format: date-time */
+            openedAt?: string;
+            /** @description The affected version range, as GitHub writes it. */
+            vulnerableVersions?: string;
+            /** @description The first version with the fix. Absent when there is none yet. */
+            patchedVersion?: string;
+            cvss?: components["schemas"]["AdvisoryCVSS"];
+            weaknesses?: components["schemas"]["AdvisoryWeakness"][];
+            /** @description The advisory's text, Markdown exactly as GitHub stores it. Render it with raw HTML disabled. */
+            description?: string;
+            /** @description Links the advisory cites. A client shows only http(s) ones. */
+            references?: string[];
+            epss?: components["schemas"]["AdvisoryEPSS"];
+            /** @description The alert's own page on the forge. */
+            url?: string;
+        };
+        AdvisoryCVSS: {
+            /** @description The CVSS base score, 0 to 10. */
+            score: number;
+            /** @description The CVSS vector string. */
+            vector?: string;
+        };
+        AdvisoryWeakness: {
+            /** @description The CWE id, such as "CWE-295". */
+            id: string;
+            name?: string;
+        };
+        /** @description The Exploit Prediction Scoring System's reading, as GitHub sends it. Absent when GitHub sent none. */
+        AdvisoryEPSS: {
+            /** @description The probability of exploitation in the next 30 days, as a fraction from 0 to 1. */
+            percentage: number;
+            /** @description How the score ranks among all scored flaws, as a fraction from 0 to 1. */
+            percentile: number;
+        };
         /** @description A repository's latest published release. */
         MainBranchRelease: {
             /** @description The release's tag, such as "v1.2.3". */
@@ -7152,6 +7256,84 @@ export interface operations {
                 };
             };
             /** @description The forge rejected the request as unauthorized, the saved token's scope doesn't cover reading checks or it isn't allowed to see that repo. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description The forge reported the repo doesn't exist (or isn't visible to this token). */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description The forge rate-limited the request. */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description The forge was unreachable, or answered with something this app couldn't classify more specifically. */
+            502: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
+    listAdvisories: {
+        parameters: {
+            query: {
+                forge: components["schemas"]["Forge"];
+                /** @description "owner/repo", matching a MainBranch.fullName from GET /api/main-branches. */
+                fullName: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The repository's open advisories, or the reason they couldn't be read. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdvisoryList"];
+                };
+            };
+            /** @description `fullName` wasn't "owner/repo", no credentials are saved for that forge, or that forge's client can't list advisories. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description No valid session cookie or token was presented. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description The forge rejected the request as unauthorized. */
             403: {
                 headers: {
                     [name: string]: unknown;
