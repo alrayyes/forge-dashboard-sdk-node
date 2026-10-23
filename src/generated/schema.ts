@@ -1095,6 +1095,104 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/issues/close": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Close one issue, on the signed-in user's behalf
+         * @description Closes the named issue. The Issues page's dialog offers it, on its own
+         *     or after posting a comment with `POST /api/issues/comment`. Closing an
+         *     issue that is already closed is not refused: both forges treat it as
+         *     done, so the call succeeds and there is no `already_closed` answer.
+         *
+         *     A refusal is an `ActionError` classified from the forge's own answer:
+         *     `permission`, `rate_limited`, `forge_error`, or `unknown` with a
+         *     plain-words `message`. An issue has no allowed-actions list and no
+         *     re-read, unlike a pull request.
+         *
+         *     Closing, reopening and commenting change the issue, so they need write
+         *     access to issues, which reading does not: a GitHub token's Issues
+         *     permission (or the App's) set to Read and write, or a Forgejo token's
+         *     `write:issue` scope. Without it the forge answers 403 and this
+         *     endpoint answers an `ActionError` with `code` `permission`, whose
+         *     `message` names what to add.
+         */
+        post: operations["closeIssue"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/issues/reopen": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Reopen one issue that was closed, on the signed-in user's behalf
+         * @description Reopens the named issue: the undo the dialog offers right after a
+         *     close. Reopening one that is already open is not refused.
+         *
+         *     A refusal is an `ActionError`, classified as for Close.
+         *
+         *     Closing, reopening and commenting change the issue, so they need write
+         *     access to issues, which reading does not: a GitHub token's Issues
+         *     permission (or the App's) set to Read and write, or a Forgejo token's
+         *     `write:issue` scope. Without it the forge answers 403 and this
+         *     endpoint answers an `ActionError` with `code` `permission`, whose
+         *     `message` names what to add.
+         */
+        post: operations["reopenIssue"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/issues/comment": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Post a comment on one issue, on the signed-in user's behalf
+         * @description Posts `body` as a comment on the named issue. The dialog's "Close with
+         *     a comment" calls this first and Close second, so when the second call
+         *     fails the page knows the comment is already there and offers only the
+         *     close again. On GitHub, with the App as the credential and a personal
+         *     token saved beside it, the comment is posted as that person.
+         *
+         *     A refusal is an `ActionError`, classified as for Close.
+         *
+         *     Closing, reopening and commenting change the issue, so they need write
+         *     access to issues, which reading does not: a GitHub token's Issues
+         *     permission (or the App's) set to Read and write, or a Forgejo token's
+         *     `write:issue` scope. Without it the forge answers 403 and this
+         *     endpoint answers an `ActionError` with `code` `permission`, whose
+         *     `message` names what to add.
+         */
+        post: operations["commentOnIssue"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/releases/details": {
         parameters: {
             query?: never;
@@ -2235,6 +2333,24 @@ export interface components {
             fullName: string;
             /** @description Matching a PullRequest.number from GET /api/dashboard. */
             number: number;
+        };
+        /** @description Which issue to act on. */
+        IssueActionRequest: {
+            forge: components["schemas"]["Forge"];
+            /** @description "owner/repo", matching an Issue.repo from GET /api/dashboard. */
+            fullName: string;
+            /** @description Matching an Issue.number from GET /api/dashboard. */
+            number: number;
+        };
+        /** @description Which issue to comment on, and what to say. */
+        IssueCommentRequest: {
+            forge: components["schemas"]["Forge"];
+            /** @description "owner/repo", matching an Issue.repo from GET /api/dashboard. */
+            fullName: string;
+            /** @description Matching an Issue.number from GET /api/dashboard. */
+            number: number;
+            /** @description The comment, as Markdown. Blank text is refused. */
+            body: string;
         };
         /** @description Which repository's default branch to rerun the failed checks of. */
         MainBranchRerunRequest: {
@@ -6053,6 +6169,234 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
+    closeIssue: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["IssueActionRequest"];
+            };
+        };
+        responses: {
+            /** @description Closed. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description The request body wasn't valid JSON, `fullName` wasn't "owner/repo", no credentials are saved for that forge, or that forge's client doesn't support closing issues at all. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description No valid session cookie was presented. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description The forge rejected the request as unauthorized: the saved token or App installation lacks write access to issues, or isn't allowed to close on that repo. `code` is `permission`. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ActionError"];
+                };
+            };
+            /** @description The forge reported the repo or issue doesn't exist (or isn't visible to this token). `code` is `unknown`. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ActionError"];
+                };
+            };
+            /** @description The forge rate-limited the request. `code` is `rate_limited`; `resetsAt` carries when the budget comes back, when the forge said. */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ActionError"];
+                };
+            };
+            /** @description The forge was unreachable, or answered with something this app couldn't classify more specifically. */
+            502: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ActionError"];
+                };
+            };
+        };
+    };
+    reopenIssue: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["IssueActionRequest"];
+            };
+        };
+        responses: {
+            /** @description Reopened. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description The request body wasn't valid JSON, `fullName` wasn't "owner/repo", no credentials are saved for that forge, or that forge's client doesn't support reopening issues at all. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description No valid session cookie was presented. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description The forge rejected the request as unauthorized: the saved token or App installation lacks write access to issues. `code` is `permission`. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ActionError"];
+                };
+            };
+            /** @description The forge reported the repo or issue doesn't exist (or isn't visible to this token). `code` is `unknown`. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ActionError"];
+                };
+            };
+            /** @description The forge rate-limited the request. `code` is `rate_limited`; `resetsAt` carries when the budget comes back, when the forge said. */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ActionError"];
+                };
+            };
+            /** @description The forge was unreachable, or answered with something this app couldn't classify more specifically. */
+            502: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ActionError"];
+                };
+            };
+        };
+    };
+    commentOnIssue: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["IssueCommentRequest"];
+            };
+        };
+        responses: {
+            /** @description Posted. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description The request body wasn't valid JSON, `fullName` wasn't "owner/repo", `body` was empty, blank or over 65536 characters (the error names `body` as its `field`), no credentials are saved for that forge, or that forge's client doesn't support commenting on issues at all. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description No valid session cookie was presented. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description The forge rejected the request as unauthorized: the saved token or App installation lacks write access to issues. `code` is `permission`. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ActionError"];
+                };
+            };
+            /** @description The forge reported the repo or issue doesn't exist (or isn't visible to this token). `code` is `unknown`. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ActionError"];
+                };
+            };
+            /** @description The forge rate-limited the request. `code` is `rate_limited`; `resetsAt` carries when the budget comes back, when the forge said. */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ActionError"];
+                };
+            };
+            /** @description The forge was unreachable, or answered with something this app couldn't classify more specifically. */
+            502: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ActionError"];
                 };
             };
         };
