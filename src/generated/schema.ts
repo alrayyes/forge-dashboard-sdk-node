@@ -1679,20 +1679,27 @@ export interface paths {
          *     never as part of GET /api/main-branches' snapshot, so a repository
          *     nobody opens costs no budget.
          *
-         *     Sorted by severity, highest first, then newest first. Only GitHub reads
-         *     them, through the Dependabot alerts of the repository; a Forgejo
-         *     repository is a 400.
+         *     Sorted by severity, highest first, then newest first. GitHub reads them
+         *     through the Dependabot alerts of the repository. A Forgejo repository
+         *     reads its lock files again and matches them against OSV, so it costs the
+         *     same as one refresh of that repository and works only while OSV
+         *     advisories are switched on; each advisory is then one distinct
+         *     advisory, with `number` its place in the list, `openedAt` the day OSV
+         *     published it and `url` its page on OSV.
          *
          *     A forge that can't say is a 200 with `state` "unknown", an empty list
          *     and the `reason`, the same words as the row's own `advisories`: alerts
          *     switched off, a credential without the Dependabot alerts permission, a
          *     rate limit, any other failure, or a repository with more open alerts
-         *     than one read pages through. An empty `known` list means nothing is
-         *     open.
+         *     than one read pages through. For Forgejo: advisories not switched on
+         *     (`not_enabled`), OSV unreachable or a lock file that can't be read
+         *     (`failed`), too much to read (`too_many`), or no lock file found (no
+         *     `reason`). An empty `known` list means nothing is open.
          *
          *     `description` is Markdown exactly as GitHub stores it, so a client must
          *     render it with raw HTML disabled. A field GitHub didn't send is left
-         *     out.
+         *     out. A Forgejo advisory leaves out what OSV does not state: `epss`,
+         *     `relationship`, `scope` and `vulnerableVersions`.
          *
          *     The same answer is the `get_repository_advisories` tool, over MCP and
          *     WebMCP.
@@ -3807,20 +3814,24 @@ export interface components {
         AdvisoryList: {
             state: components["schemas"]["AdvisoryState"];
             reason?: components["schemas"]["AdvisoryReason"];
-            /** @description The repository's advisories page on the forge. Absent when none are open or the state is unknown. */
+            /** @description Set on a known Forgejo list that leaves out packages the dashboard may not send to OSV, because they may be private. Absent otherwise. */
+            partial?: boolean;
+            /** @description The repository's advisories page on the forge. Absent when none are open or the state is unknown, and for Forgejo, which has no page for a whole repository. */
             url?: string;
             /** @description Empty when none are open and whenever `state` is "unknown". Highest severity first, then newest first. */
             advisories: components["schemas"]["AdvisoryItem"][];
         };
         /** @description One open Dependabot alert with the fields GitHub's alert page shows. */
         AdvisoryItem: {
-            /** @description The alert's number on the forge. */
+            /** @description The alert's number on the forge. For Forgejo, the advisory's place in the list. */
             number: number;
             /** @description The alert's state on the forge. Always "open" here. */
             state: string;
             severity?: components["schemas"]["AdvisorySeverity"];
             /** @description The advisory's one-line title. */
             summary: string;
+            /** @description The advisory's own id in the database that states it. Set for Forgejo. */
+            id?: string;
             ghsaId?: string;
             cveId?: string;
             /** @description The vulnerable dependency's name. */
