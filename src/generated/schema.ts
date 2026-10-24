@@ -42,8 +42,10 @@ export interface paths {
          * Start a passkey registration ceremony
          * @description An instance has one user. The first registration on a fresh
          *     instance (see GET /api/auth/registration-status) creates that
-         *     user. Once any account holds a passkey, this answers 403 whatever
-         *     username it carries.
+         *     user and the server names it, so the request carries no body. The
+         *     options require a resident key, so the passkey can be found at
+         *     sign-in without being named. Once any account holds a passkey, this
+         *     answers 403.
          */
         post: operations["beginRegistration"];
         delete?: never;
@@ -78,7 +80,13 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Start a passkey login ceremony */
+        /**
+         * Start a passkey login ceremony
+         * @description An instance has one user, so there is nothing to name and the request
+         *     carries no body. The options name no passkey and no user, so the
+         *     browser offers whichever discoverable passkey it holds for the site
+         *     and nothing about the account is revealed to a visitor.
+         */
         post: operations["beginLogin"];
         delete?: never;
         options?: never;
@@ -172,7 +180,8 @@ export interface paths {
          * @description The authenticated counterpart to POST /api/auth/register/begin —
          *     that one only ever works for a brand-new, credential-less
          *     account; this is how an already-registered user adds a second
-         *     (or third...) passkey, e.g. a laptop and a security key.
+         *     (or third...) passkey, e.g. a laptop and a security key. Like the
+         *     first registration it requires a resident key.
          */
         post: operations["beginAddCredential"];
         delete?: never;
@@ -2071,29 +2080,9 @@ export interface components {
              */
             idleAfterSeconds: number;
         };
-        RegisterBeginRequest: {
-            /**
-             * @description Surrounding whitespace is trimmed by the server, and what is
-             *     left must not be empty. Clients may check the same pattern for
-             *     quick feedback; the server decides.
-             * @example ryan
-             */
-            username: string;
-            /** @example Ryan */
-            displayName: string;
-        };
         RegistrationStatus: {
             /** @description True only when the instance has zero registered users. */
             open: boolean;
-        };
-        LoginBeginRequest: {
-            /**
-             * @description Surrounding whitespace is trimmed by the server, and what is
-             *     left must not be empty. Clients may check the same pattern for
-             *     quick feedback; the server decides.
-             * @example ryan
-             */
-            username: string;
         };
         /**
          * @description The WebAuthn specification's own JSON shape for
@@ -4321,11 +4310,7 @@ export interface operations {
             path?: never;
             cookie?: never;
         };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["RegisterBeginRequest"];
-            };
-        };
+        requestBody?: never;
         responses: {
             /**
              * @description WebAuthn credential creation options, passed straight to the
@@ -4352,9 +4337,7 @@ export interface operations {
     };
     finishRegistration: {
         parameters: {
-            query: {
-                username: string;
-            };
+            query?: never;
             header?: never;
             path?: never;
             cookie?: never;
@@ -4409,11 +4392,7 @@ export interface operations {
             path?: never;
             cookie?: never;
         };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["LoginBeginRequest"];
-            };
-        };
+        requestBody?: never;
         responses: {
             /**
              * @description WebAuthn credential request options, passed straight to the
@@ -4427,7 +4406,7 @@ export interface operations {
                     "application/json": components["schemas"]["WebAuthnCeremonyOptions"];
                 };
             };
-            /** @description No account is registered under that username. */
+            /** @description Nobody has registered a passkey on this instance yet. */
             404: {
                 headers: {
                     [name: string]: unknown;
@@ -4440,9 +4419,7 @@ export interface operations {
     };
     finishLogin: {
         parameters: {
-            query: {
-                username: string;
-            };
+            query?: never;
             header?: never;
             path?: never;
             cookie?: never;
