@@ -226,7 +226,15 @@ export interface paths {
         delete: operations["deleteCredential"];
         options?: never;
         head?: never;
-        patch?: never;
+        /**
+         * Rename one of the signed-in user's own passkeys
+         * @description Changes the name a passkey is listed under, so several can be told
+         *     apart (a password manager and a security key, say). The name is
+         *     trimmed first, then must be 1 to 64 characters. It is a plain label:
+         *     clients show it as text, never as markup. Only the name changes;
+         *     which passkeys can sign in does not.
+         */
+        patch: operations["renameCredential"];
         trace?: never;
     };
     "/api/settings": {
@@ -2367,10 +2375,14 @@ export interface components {
         Credential: {
             /** @description This passkey's own credential ID (base64url), distinct from the account's user ID. */
             id: string;
-            /** @description The name given at registration time, so a list of several is tellable apart. */
+            /** @description The passkey's name, given at registration and changeable with `PATCH /api/auth/credentials/{id}`. Empty when it was never named; clients then fall back to `createdAt`. */
             label: string;
             /** Format: date-time */
             createdAt: string;
+        };
+        RenameCredentialRequest: {
+            /** @description The new name. Trimmed first; blank is refused. */
+            label: string;
         };
         /**
          * @description A personal API token's own metadata — never the token value
@@ -4646,6 +4658,62 @@ export interface operations {
             };
             /** @description No valid session cookie was presented. */
             401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
+    renameCredential: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RenameCredentialRequest"];
+            };
+        };
+        responses: {
+            /** @description The passkey, under its new name. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Credential"];
+                };
+            };
+            /**
+             * @description The request body wasn't valid JSON, or `label` was blank or over
+             *     64 characters once trimmed (the error names `label` as its `field`).
+             */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description No valid session cookie was presented. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description No passkey with this id belongs to the signed-in user. */
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };
