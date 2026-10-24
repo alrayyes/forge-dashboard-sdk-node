@@ -4582,7 +4582,8 @@ export interface operations {
                 /**
                  * @description A name the user recognizes, e.g. "MacBook" or "YubiKey",
                  *     prompted for at registration time, never derived
-                 *     from the authenticator itself.
+                 *     from the authenticator itself. Trimmed first, then must be 1 to
+                 *     64 characters, the same rule as renaming a passkey.
                  */
                 label: string;
             };
@@ -4609,7 +4610,11 @@ export interface operations {
                     "application/json": components["schemas"]["Credential"];
                 };
             };
-            /** @description label was blank, or the ceremony failed verification, or had already expired. */
+            /**
+             * @description `label` was blank or over 64 characters once trimmed (the error
+             *     names `label` as its `field`), or the ceremony failed verification,
+             *     or had already expired.
+             */
             400: {
                 headers: {
                     [name: string]: unknown;
