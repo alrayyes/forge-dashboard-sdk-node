@@ -4260,7 +4260,29 @@ export interface components {
             autoUpdateBranch: boolean;
         };
     };
-    responses: never;
+    responses: {
+        /**
+         * @description This address made too many sign-in or registration requests. The
+         *     four ceremony endpoints (`/api/auth/register/begin`,
+         *     `/api/auth/register/finish`, `/api/auth/login/begin` and
+         *     `/api/auth/login/finish`) share one allowance per client address: a
+         *     burst of 10 requests, then one more every 6 seconds. A person signing
+         *     in uses two requests, so they never reach it. Wait `Retry-After`
+         *     seconds and try again. The client address is the connection's own, or
+         *     the one a trusted reverse proxy forwarded in `X-Forwarded-For`; see
+         *     the `TRUSTED_PROXIES` setting in the configuration docs.
+         */
+        AuthRateLimited: {
+            headers: {
+                /** @description Seconds until this address may make another of these requests. */
+                "Retry-After"?: number;
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": components["schemas"]["Error"];
+            };
+        };
+    };
     parameters: {
         /**
          * @description Any value says the read is the page's own timed refresh of its data,
@@ -4345,6 +4367,7 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
+            429: components["responses"]["AuthRateLimited"];
         };
     };
     finishRegistration: {
@@ -4395,6 +4418,7 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
+            429: components["responses"]["AuthRateLimited"];
         };
     };
     beginLogin: {
@@ -4427,6 +4451,7 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
+            429: components["responses"]["AuthRateLimited"];
         };
     };
     finishLogin: {
@@ -4464,6 +4489,7 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
+            429: components["responses"]["AuthRateLimited"];
         };
     };
     logout: {
