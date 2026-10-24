@@ -2,12 +2,12 @@
 
 ## Requirements
 
-- [Bun](https://bun.sh) 1.3.14 — pinned via `packageManager` in
-  `package.json` and `oven-sh/setup-bun` in CI. Bun 1.4 switched
-  `bun.lock` to a new `lockfileVersion: 2` format that Dependabot's and
-  Renovate's bundled Bun (1.3.x as of this writing) can't parse and
-  silently corrupts back to v1 -- staying below 1.4 here keeps the
-  dependency bot actually working.
+- [Bun](https://bun.sh) 1.4.3 — pinned via `packageManager` in
+  `package.json` and `oven-sh/setup-bun` in CI. The mutation runner
+  (`@hughescr/stryker-bun-runner`) refuses to start below bun 1.4.0, so
+  bump the pin together with the runner. `bun.lock` stays on
+  `lockfileVersion: 1`; check `bun install --frozen-lockfile` after any
+  bump, since a bot's bundled Bun may rewrite the lockfile format.
 - [lefthook](https://github.com/evilmartians/lefthook). `bun install` then
   `lefthook install` once, after cloning.
 
