@@ -1,5 +1,37 @@
 # Changelog
 
+## [17.3.0](https://github.com/alrayyes/forge-dashboard-sdk-node/compare/v17.2.0...v17.3.0) (2026-10-24)
+
+
+### Features
+
+* **spec:** regenerate types from forge-dashboard openapi.yaml ([#320](https://github.com/alrayyes/forge-dashboard-sdk-node/issues/320)) ([22ec43a](https://github.com/alrayyes/forge-dashboard-sdk-node/commit/22ec43a204304a36b2081de4d3ba2cc4af8ca4f6))
+
+## [17.2.0](https://github.com/alrayyes/forge-dashboard-sdk-node/compare/v17.1.0...v17.2.0) (2026-10-24)
+
+
+### Features
+
+* **spec:** regenerate types from forge-dashboard openapi.yaml ([#318](https://github.com/alrayyes/forge-dashboard-sdk-node/issues/318)) ([98f4fc7](https://github.com/alrayyes/forge-dashboard-sdk-node/commit/98f4fc763bf0b45900dc1fc8b5d0e7137fecc412))
+
+## [17.1.0](https://github.com/alrayyes/forge-dashboard-sdk-node/compare/v17.0.0...v17.1.0) (2026-10-24)
+
+
+### Features
+
+* **spec:** regenerate types from forge-dashboard openapi.yaml ([#316](https://github.com/alrayyes/forge-dashboard-sdk-node/issues/316)) ([b8ac538](https://github.com/alrayyes/forge-dashboard-sdk-node/commit/b8ac538b624d4a310289ce49f40d2f80744df52d))
+
+## [17.0.0](https://github.com/alrayyes/forge-dashboard-sdk-node/compare/v16.24.0...v17.0.0) (2026-10-24)
+
+
+### ⚠ BREAKING CHANGES
+
+* **spec:** forge-dashboard's spec removed or narrowed something a client may depend on:
+
+### Features
+
+* **spec:** regenerate types from forge-dashboard openapi.yaml ([#314](https://github.com/alrayyes/forge-dashboard-sdk-node/issues/314)) ([f38eff4](https://github.com/alrayyes/forge-dashboard-sdk-node/commit/f38eff496a484a8bd5a6fd86bb3dd1af8d00170c))
+
 ## [16.24.0](https://github.com/alrayyes/forge-dashboard-sdk-node/compare/v16.23.0...v16.24.0) (2026-10-24)
 
 

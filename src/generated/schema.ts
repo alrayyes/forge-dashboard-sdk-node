@@ -42,8 +42,10 @@ export interface paths {
          * Start a passkey registration ceremony
          * @description An instance has one user. The first registration on a fresh
          *     instance (see GET /api/auth/registration-status) creates that
-         *     user. Once any account holds a passkey, this answers 403 whatever
-         *     username it carries.
+         *     user and the server names it, so the request carries no body. The
+         *     options require a resident key, so the passkey can be found at
+         *     sign-in without being named. Once any account holds a passkey, this
+         *     answers 403.
          */
         post: operations["beginRegistration"];
         delete?: never;
@@ -78,7 +80,13 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Start a passkey login ceremony */
+        /**
+         * Start a passkey login ceremony
+         * @description An instance has one user, so there is nothing to name and the request
+         *     carries no body. The options name no passkey and no user, so the
+         *     browser offers whichever discoverable passkey it holds for the site
+         *     and nothing about the account is revealed to a visitor.
+         */
         post: operations["beginLogin"];
         delete?: never;
         options?: never;
@@ -172,7 +180,8 @@ export interface paths {
          * @description The authenticated counterpart to POST /api/auth/register/begin —
          *     that one only ever works for a brand-new, credential-less
          *     account; this is how an already-registered user adds a second
-         *     (or third...) passkey, e.g. a laptop and a security key.
+         *     (or third...) passkey, e.g. a laptop and a security key. Like the
+         *     first registration it requires a resident key.
          */
         post: operations["beginAddCredential"];
         delete?: never;
@@ -217,7 +226,15 @@ export interface paths {
         delete: operations["deleteCredential"];
         options?: never;
         head?: never;
-        patch?: never;
+        /**
+         * Rename one of the signed-in user's own passkeys
+         * @description Changes the name a passkey is listed under, so several can be told
+         *     apart (a password manager and a security key, say). The name is
+         *     trimmed first, then must be 1 to 64 characters. It is a plain label:
+         *     clients show it as text, never as markup. Only the name changes;
+         *     which passkeys can sign in does not.
+         */
+        patch: operations["renameCredential"];
         trace?: never;
     };
     "/api/settings": {
@@ -2071,29 +2088,9 @@ export interface components {
              */
             idleAfterSeconds: number;
         };
-        RegisterBeginRequest: {
-            /**
-             * @description Surrounding whitespace is trimmed by the server, and what is
-             *     left must not be empty. Clients may check the same pattern for
-             *     quick feedback; the server decides.
-             * @example ryan
-             */
-            username: string;
-            /** @example Ryan */
-            displayName: string;
-        };
         RegistrationStatus: {
             /** @description True only when the instance has zero registered users. */
             open: boolean;
-        };
-        LoginBeginRequest: {
-            /**
-             * @description Surrounding whitespace is trimmed by the server, and what is
-             *     left must not be empty. Clients may check the same pattern for
-             *     quick feedback; the server decides.
-             * @example ryan
-             */
-            username: string;
         };
         /**
          * @description The WebAuthn specification's own JSON shape for
@@ -2378,10 +2375,14 @@ export interface components {
         Credential: {
             /** @description This passkey's own credential ID (base64url), distinct from the account's user ID. */
             id: string;
-            /** @description The name given at registration time, so a list of several is tellable apart. */
+            /** @description The passkey's name, given at registration and changeable with `PATCH /api/auth/credentials/{id}`. Empty when it was never named; clients then fall back to `createdAt`. */
             label: string;
             /** Format: date-time */
             createdAt: string;
+        };
+        RenameCredentialRequest: {
+            /** @description The new name. Trimmed first; blank is refused. */
+            label: string;
         };
         /**
          * @description A personal API token's own metadata — never the token value
@@ -4259,7 +4260,29 @@ export interface components {
             autoUpdateBranch: boolean;
         };
     };
-    responses: never;
+    responses: {
+        /**
+         * @description This address made too many sign-in or registration requests. The
+         *     four ceremony endpoints (`/api/auth/register/begin`,
+         *     `/api/auth/register/finish`, `/api/auth/login/begin` and
+         *     `/api/auth/login/finish`) share one allowance per client address: a
+         *     burst of 10 requests, then one more every 6 seconds. A person signing
+         *     in uses two requests, so they never reach it. Wait `Retry-After`
+         *     seconds and try again. The client address is the connection's own, or
+         *     the one a trusted reverse proxy forwarded in `X-Forwarded-For`; see
+         *     the `TRUSTED_PROXIES` setting in the configuration docs.
+         */
+        AuthRateLimited: {
+            headers: {
+                /** @description Seconds until this address may make another of these requests. */
+                "Retry-After"?: number;
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": components["schemas"]["Error"];
+            };
+        };
+    };
     parameters: {
         /**
          * @description Any value says the read is the page's own timed refresh of its data,
@@ -4321,11 +4344,7 @@ export interface operations {
             path?: never;
             cookie?: never;
         };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["RegisterBeginRequest"];
-            };
-        };
+        requestBody?: never;
         responses: {
             /**
              * @description WebAuthn credential creation options, passed straight to the
@@ -4348,13 +4367,12 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
+            429: components["responses"]["AuthRateLimited"];
         };
     };
     finishRegistration: {
         parameters: {
-            query: {
-                username: string;
-            };
+            query?: never;
             header?: never;
             path?: never;
             cookie?: never;
@@ -4400,6 +4418,7 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
+            429: components["responses"]["AuthRateLimited"];
         };
     };
     beginLogin: {
@@ -4409,11 +4428,7 @@ export interface operations {
             path?: never;
             cookie?: never;
         };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["LoginBeginRequest"];
-            };
-        };
+        requestBody?: never;
         responses: {
             /**
              * @description WebAuthn credential request options, passed straight to the
@@ -4427,7 +4442,7 @@ export interface operations {
                     "application/json": components["schemas"]["WebAuthnCeremonyOptions"];
                 };
             };
-            /** @description No account is registered under that username. */
+            /** @description Nobody has registered a passkey on this instance yet. */
             404: {
                 headers: {
                     [name: string]: unknown;
@@ -4436,13 +4451,12 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
+            429: components["responses"]["AuthRateLimited"];
         };
     };
     finishLogin: {
         parameters: {
-            query: {
-                username: string;
-            };
+            query?: never;
             header?: never;
             path?: never;
             cookie?: never;
@@ -4475,6 +4489,7 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
+            429: components["responses"]["AuthRateLimited"];
         };
     };
     logout: {
@@ -4593,7 +4608,8 @@ export interface operations {
                 /**
                  * @description A name the user recognizes, e.g. "MacBook" or "YubiKey",
                  *     prompted for at registration time, never derived
-                 *     from the authenticator itself.
+                 *     from the authenticator itself. Trimmed first, then must be 1 to
+                 *     64 characters, the same rule as renaming a passkey.
                  */
                 label: string;
             };
@@ -4620,7 +4636,11 @@ export interface operations {
                     "application/json": components["schemas"]["Credential"];
                 };
             };
-            /** @description label was blank, or the ceremony failed verification, or had already expired. */
+            /**
+             * @description `label` was blank or over 64 characters once trimmed (the error
+             *     names `label` as its `field`), or the ceremony failed verification,
+             *     or had already expired.
+             */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -4669,6 +4689,62 @@ export interface operations {
             };
             /** @description No valid session cookie was presented. */
             401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
+    renameCredential: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RenameCredentialRequest"];
+            };
+        };
+        responses: {
+            /** @description The passkey, under its new name. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Credential"];
+                };
+            };
+            /**
+             * @description The request body wasn't valid JSON, or `label` was blank or over
+             *     64 characters once trimmed (the error names `label` as its `field`).
+             */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description No valid session cookie was presented. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description No passkey with this id belongs to the signed-in user. */
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };
