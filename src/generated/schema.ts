@@ -2604,6 +2604,12 @@ export interface components {
              */
             runName?: string;
             /**
+             * @description The forge's own number for that run, the one in the run's page
+             *     address. It tells two runs of one workflow apart. Present with
+             *     `runId` when the forge says it.
+             */
+            runNumber?: number;
+            /**
              * @description Whether the base branch's protection makes this check block the
              *     merge (GitHub required status checks and rulesets, Forgejo
              *     `status_check_contexts`). Absent when the forge can't tell — a
