@@ -780,7 +780,7 @@ export interface paths {
          *     passed but waits on a failed one goes again too. Forgejo
          *     gained the rerun routes in version 17; an older instance answers 409
          *     with a plain sentence and sends no rerun request to the forge (the
-         *     pull request and its runs are still looked up first), and says so up
+         *     version is checked before the pull request or its runs are looked up), and says so up
          *     front in `ForgeHealth.rerunChecksBlocked`. `rerun_checks` still
          *     appears in `allowedActions` for such a Forgejo: a caller learns of
          *     the block from that health entry or from the 409. The block is per
@@ -791,6 +791,13 @@ export interface paths {
          *     means the pull request has no failed check to rerun. Anything the
          *     forge refuses (the token may not write to Actions, the run is too
          *     old or already running) arrives with its own plain-words `message`.
+         *     Jobs are rerun one request at a time, so a refusal can come after
+         *     earlier jobs restarted; the `message` then ends with which jobs
+         *     restarted and which did not. When the version could not be read the
+         *     forge decides, and a 404 from it reads "The forge couldn't find that
+         *     run or job. It may not support rerunning checks from here, or the
+         *     token can't see this repository." That sentence names no forge or
+         *     version, because a 404 can mean either.
          */
         post: operations["rerunPullRequestChecks"];
         delete?: never;
@@ -2891,7 +2898,7 @@ export interface components {
             rateLimitREST?: components["schemas"]["RateLimit"];
             /** @description Why a "@dependabot" comment sent through this forge's credential would be refused. Dependabot only honours commands from a user with push access and ignores GitHub App accounts whatever permissions the App holds. Set only for GitHub when the connected credential is an App with no personal access token saved to send commands as. The Dependabot buttons lock with this text, auto-update-branch skips Dependabot pull requests, and the dependabot-action endpoint answers 409 with it. Omitted when commands work. */
             dependabotCommandsBlocked?: string;
-            /** @description Why this forge can't rerun checks. Set only for a Forgejo whose version is 7 to 16, which has no API route for it; a version below 7 may be a Gitea and is left to the forge. The version is read in the background, read again after an hour while it blocks, and retried after a failed read or one that gives no number. A block that has gone stale is dropped when the read fails. Rerun failed checks is not offered for the forge, and the page shows this text where the button would be. Omitted when rerunning works or the version could not be read. */
+            /** @description Why this forge can't rerun checks. Set only for a Forgejo whose version is 7 to 16, which has no API route for it. A version below 7 is left to the forge, because a Gitea numbers itself that way. The version is read in the background, read again after an hour while it blocks, and retried after a failed read or one that gives no number. A block that has gone stale is dropped when the read fails. Rerun failed checks is not offered for the forge, and the page shows this text where the button would be. Omitted when rerunning works or the version could not be read. */
             rerunChecksBlocked?: string;
         };
         ForgeApiStats: {
