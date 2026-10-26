@@ -1716,10 +1716,10 @@ export interface paths {
          * The CI status of every tracked repository's default branch
          * @description One row per tracked repository, showing the latest pipeline on its
          *     default branch: failed, passed, running or none. A repository
-         *     ignored for pull requests is left out, as on the pull requests page. Every other row is returned, whatever its status, with a
-         *     count per status, so a client
-         *     filters and sorts locally and its pill counts always match what each
-         *     pill lists. Rows come in no particular order: the client orders them.
+         *     ignored for pull requests is left out, as on the pull requests page.
+         *     Every other row is returned, whatever its status, and no tally comes
+         *     with them, so a client filters, sorts and counts locally and its pill
+         *     counts always match what each pill lists. Rows come in no particular order: the client orders them.
          *
          *     Served from the snapshot the background refresh already holds, so it
          *     never calls a forge. On GitHub the branch's check status rides the
@@ -3809,33 +3809,6 @@ export interface components {
             updatedAt: string;
         };
         /**
-         * @description The Branches page's numbers: how many default branches
-         *     it lists and how many of those have a pipeline running, failed and
-         *     passed, the same four as `NavPullRequestCount`, plus `none`, the ones
-         *     with no pipeline, and `awaitingApproval`, the ones whose workflow runs
-         *     are held until someone approves them. A branch whose only trouble is a
-         *     cancelled run counts in `total` only, as a pull request with no checks
-         *     does, so the parts need not add up. All six are always present.
-         */
-        NavCount: {
-            /** @description How many default branches the page lists. */
-            total: number;
-            /** @description How many of them have a pipeline that is still running. */
-            running: number;
-            /** @description How many of them have a failing pipeline. */
-            failed: number;
-            /** @description How many of them have a pipeline that passed. */
-            passed: number;
-            /** @description How many of them have no pipeline. */
-            none: number;
-            /**
-             * @description How many of them have workflow runs held until someone approves
-             *     them. Nothing has run and nothing has failed, so they are in none
-             *     of `running`, `failed` and `passed`.
-             */
-            awaitingApproval: number;
-        };
-        /**
          * @description A pull request page's numbers. `running`, `failed` and
          *     `passed` count the pull requests whose CI is pending, failing and
          *     succeeded. A pull request with no checks counts in `total` only, so
@@ -3870,18 +3843,16 @@ export interface components {
          *     board shows by default, so they match each page when it opens. Pull
          *     requests leave out ignored repos, draft pull requests and hidden pull
          *     requests whatever `includeDrafts` and `includeHidden` ask for, so the
-         *     badge doesn't jump when a toggle flips; branches counts the default
-         *     branches GET /api/main-branches lists, which also leave out ignored
-         *     repos. Pull requests are
+         *     badge doesn't jump when a toggle flips. Pull requests are
          *     split by `kind`
          *     (release pull requests under `releases`, Dependabot and Renovate
          *     under `bots`, the rest under `pullRequests`). Always present, with
          *     zeros when there is nothing. A client hides a page's whole nav item at
          *     zero total, and a state's number at zero. Every page except Issues also
-         *     carries `running` and `passed`.
+         *     carries `running` and `passed`. The Branches badge isn't here: a
+         *     client counts the rows of `mainBranchPage`.
          */
         NavCounts: {
-            branches: components["schemas"]["NavCount"];
             pullRequests: components["schemas"]["NavPullRequestCount"];
             issues: components["schemas"]["NavIssueCount"];
             releases: components["schemas"]["NavPullRequestCount"];
@@ -4190,25 +4161,16 @@ export interface components {
             url: string;
         };
         /**
-         * @description How many rows are in each status, the numbers on the filter pills.
-         *     `total` is every row, so it equals the sum of the other six.
+         * @description Every default branch the page lists, in no particular order. There is
+         *     no tally: a client counts the rows it holds, so the filter pills and
+         *     the navigation badge always agree with the list.
          */
-        MainBranchCounts: {
-            failed: number;
-            passed: number;
-            running: number;
-            cancelled: number;
-            awaitingApproval: number;
-            none: number;
-            total: number;
-        };
         MainBranches: {
             /**
              * Format: date-time
              * @description When the snapshot was refreshed, not when it was requested.
              */
             generatedAt: string;
-            counts: components["schemas"]["MainBranchCounts"];
             /** @description Each forge's health as of the last refresh, the same as the dashboard's. A client uses it to hold back an action that a forge which can't be reached, or whose rate limit is spent, would probably refuse. The budget can run out between refreshes, so the forge still has the final say. */
             forges: components["schemas"]["ForgeHealth"][];
             branches: components["schemas"]["MainBranch"][];
