@@ -3109,18 +3109,6 @@ export interface components {
             resetsAt: string;
             /** @description The point price the most recent call was actually charged — GraphQL-specific, since a REST request has no separate cost concept beyond the flat one-request-one-point REST's own budget already counts. Omitted for a REST-sourced RateLimit. */
             cost?: number;
-            /**
-             * @description How worried a client should be about this budget, graded by
-             *     the server as of the response, so no client needs its own
-             *     threshold or clock check. `exceeded`: nothing left and the
-             *     reset hasn't been seen to pass. `low`: under 5% left (also a
-             *     spent budget whose reset time has passed, until the next
-             *     snapshot says otherwise). `warning`: under 20% left but not
-             *     yet low, for a gauge's amber stage; a banner or a lock has no
-             *     reason to act on it. `ok`: everything else.
-             * @enum {string}
-             */
-            severity: "ok" | "warning" | "low" | "exceeded";
         };
         PullRequest: {
             forge: components["schemas"]["Forge"];
