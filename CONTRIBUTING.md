@@ -10,6 +10,9 @@
   bump, since a bot's bundled Bun may rewrite the lockfile format.
 - [lefthook](https://github.com/evilmartians/lefthook). `bun install` then
   `lefthook install` once, after cloning.
+- [gitleaks](https://github.com/gitleaks/gitleaks) on your `PATH`. The
+  `pre-commit` and `pre-push` hooks scan for secrets with it, and the
+  `gitleaks` workflow runs the same scan in CI.
 
 Bun is the runtime here, not just the package manager -- there's no Docker
 wrapper the way this account's Go repos use one. A Node/Bun toolchain is

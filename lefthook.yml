@@ -1,6 +1,8 @@
 pre-commit:
   parallel: false
   commands:
+    gitleaks:
+      run: gitleaks git --staged --redact --no-banner
     biome:
       glob: "*.{js,ts,json}"
       run: bun x @biomejs/biome check --write --no-errors-on-unmatched {staged_files}
@@ -18,6 +20,10 @@ commit-msg:
 pre-push:
   parallel: false
   commands:
+    # The whole history, not the unpushed range: about a second over 302
+    # commits, and CI does the same (rules/secrets.md).
+    gitleaks:
+      run: gitleaks git --redact --no-banner
     biome-check:
       run: bun x @biomejs/biome check .
     sort-package-json-check:
