@@ -611,6 +611,12 @@ export interface paths {
          *     `merge` in `allowedActions`. A Merge posted for one anyway
          *     gets 409 `already_up_to_date` from this server, which never asks the
          *     forge.
+         *
+         *     `deleteBranch: true` also asks for the pull request's source branch
+         *     to be deleted once the merge has landed. The merge never depends on
+         *     it: a branch that can't or shouldn't be deleted leaves the merge
+         *     done and is reported in `branchDeletion`. Without `deleteBranch`
+         *     the answer is a bare 204 and the branch is left alone.
          */
         post: operations["mergePullRequest"];
         delete?: never;
@@ -2506,6 +2512,41 @@ export interface components {
             fullName: string;
             /** @description Matching a PullRequest.number from GET /api/dashboard. */
             number: number;
+        };
+        /** @description Which pull request to merge, and whether to delete its source branch afterwards. */
+        PullRequestMergeRequest: components["schemas"]["PullRequestActionRequest"] & {
+            /**
+             * @description Delete the source branch once the merge has landed.
+             * @default false
+             */
+            deleteBranch: boolean;
+        };
+        /** @description What a merge that asked for `deleteBranch` did besides merging. */
+        PullRequestMergeResult: {
+            branchDeletion: components["schemas"]["BranchDeletion"];
+        };
+        /**
+         * @description What happened to the source branch. A fact for the client to word,
+         *     never a reason to treat the merge as failed.
+         */
+        BranchDeletion: {
+            /**
+             * @description `deleted`: the branch is gone, including when the forge had
+             *     already removed it. `skipped`: it was left alone on purpose,
+             *     see `reason`. `failed`: the forge refused or couldn't be
+             *     reached, and the branch may still exist.
+             * @enum {string}
+             */
+            outcome: "deleted" | "skipped" | "failed";
+            /**
+             * @description Why a `skipped` branch was left. `fork`: the branch lives in
+             *     another repo. `default_branch`: it is the repo's default
+             *     branch. `protected`: the forge protects it. `unsupported`: the
+             *     forge's client can't delete branches. Absent unless `outcome`
+             *     is `skipped`.
+             * @enum {string}
+             */
+            reason?: "fork" | "default_branch" | "protected" | "unsupported";
         };
         /** @description Which issue to act on. */
         IssueActionRequest: {
@@ -5450,11 +5491,23 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["PullRequestActionRequest"];
+                "application/json": components["schemas"]["PullRequestMergeRequest"];
             };
         };
         responses: {
-            /** @description Merged. */
+            /**
+             * @description Merged, with `deleteBranch` set. `branchDeletion` says what
+             *     happened to the source branch.
+             */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PullRequestMergeResult"];
+                };
+            };
+            /** @description Merged, with `deleteBranch` unset or false. */
             204: {
                 headers: {
                     [name: string]: unknown;
