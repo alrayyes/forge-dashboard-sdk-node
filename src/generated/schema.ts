@@ -3857,6 +3857,14 @@ export interface components {
             firstRefreshDone: boolean;
             navCounts: components["schemas"]["NavCounts"];
             /**
+             * @description What `GET /api/main-branches` answers, from the same snapshot and
+             *     with the same ignore list, so the Main branches page redraws from
+             *     the message every other page reads. It reads the endpoint itself only
+             *     while the stream is down or just back.
+             *     Always present.
+             */
+            mainBranchPage: components["schemas"]["MainBranches"];
+            /**
              * Format: date-time
              * @description When this snapshot was refreshed, not when it was requested.
              */
