@@ -1719,9 +1719,7 @@ export interface paths {
          *     ignored for pull requests is left out, as on the pull requests page. Every other row is returned, whatever its status, with a
          *     count per status, so a client
          *     filters and sorts locally and its pill counts always match what each
-         *     pill lists. Rows come newest commit first (`commit.committedAt`),
-         *     whatever their status. A row with no commit time comes after
-         *     every dated one; ties and undated rows go by `fullName`, then `forge`.
+         *     pill lists. Rows come in no particular order: the client orders them.
          *
          *     Served from the snapshot the background refresh already holds, so it
          *     never calls a forge. On GitHub the branch's check status rides the
@@ -1730,7 +1728,7 @@ export interface paths {
          *     per repository.
          *
          *     A forge that can't be reached keeps its last known rows, each marked
-         *     `stale` with `staleSince`, the same carry-over `forges[].staleSince`
+         *     `staleSince`, the same carry-over `forges[].staleSince`
          *     on GET /api/dashboard reports. A forge whose rate-limit budget is
          *     spent is skipped until it resets and its rows are kept the same way.
          *     Only the signed-in user's own repositories.
@@ -4064,14 +4062,10 @@ export interface components {
              */
             latestRelease: components["schemas"]["MainBranchRelease"] | null;
             /**
-             * @description True when this row is the last known one because its forge
-             *     couldn't be read or its rate limit is spent. A client offers no
-             *     write on a stale row.
-             */
-            stale: boolean;
-            /**
              * Format: date-time
-             * @description When this row was last fetched. Null unless `stale`.
+             * @description Set when this row is the last known one because its forge couldn't
+             *     be read or its rate limit is spent: the time it was last fetched.
+             *     Null otherwise. A client offers no write on a stale row.
              */
             staleSince: string | null;
             advisories?: components["schemas"]["Advisories"];
