@@ -28,8 +28,8 @@ bun x @biomejs/biome check .
 bun run build
 ```
 
-`lefthook run pre-push` runs the same set (plus `sort-package-json --check`),
-so that's the one command to run before opening a pull request.
+`lefthook run pre-push` runs the same set (plus `sort-package-json --check` and a
+gitleaks scan of the whole history), so that's the one command to run before opening a pull request.
 
 ## Published reports
 
