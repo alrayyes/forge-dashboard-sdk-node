@@ -2541,12 +2541,14 @@ export interface components {
             /**
              * @description Why a `skipped` branch was left. `fork`: the branch lives in
              *     another repo. `default_branch`: it is the repo's default
-             *     branch. `protected`: the forge protects it. `unsupported`: the
+             *     branch. `protected`: the forge protects it. `in_use`: another
+             *     open pull request in the repo has it as its head or base, so
+             *     deleting it would strand that pull request. `unsupported`: the
              *     forge's client can't delete branches. Absent unless `outcome`
              *     is `skipped`.
              * @enum {string}
              */
-            reason?: "fork" | "default_branch" | "protected" | "unsupported";
+            reason?: "fork" | "default_branch" | "protected" | "in_use" | "unsupported";
         };
         /** @description Which issue to act on. */
         IssueActionRequest: {
