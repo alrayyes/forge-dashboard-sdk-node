@@ -580,6 +580,54 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/repos/rebase-bots/enable": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Rebase Dependabot and Renovate pull requests for one tracked repo
+         * @description A Dependabot or Renovate pull request of this repo that the
+         *     background refresh finds behind its base branch gets the bot's own
+         *     rebase from then on: Dependabot's rebase comment, or Renovate's
+         *     rebase label. It is never given a generic branch update or a pushed
+         *     commit. Human, draft and release-please pull requests are not
+         *     touched, and a choice made on one pull request still wins. Works
+         *     with or without automatic branch updates on the repo. Idempotent:
+         *     enabling an already-enabled repo is a no-op, not an error.
+         */
+        post: operations["enableRebaseBots"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/repos/rebase-bots/disable": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Stop rebasing Dependabot and Renovate pull requests for one tracked repo
+         * @description The reverse of POST /api/repos/rebase-bots/enable. Idempotent:
+         *     disabling a repo that was never enabled is a no-op, not an error.
+         */
+        post: operations["disableRebaseBots"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/pull-requests/merge": {
         parameters: {
             query?: never;
@@ -4296,6 +4344,14 @@ export interface components {
              */
             failingForGood?: boolean;
             /**
+             * @description Whether the signed-in user has turned on rebasing bot pull
+             *     requests for this repo. A behind Dependabot or Renovate pull
+             *     request gets the bot's own rebase, whatever the repo's
+             *     automatic branch update setting says. Human, draft and
+             *     release-please pull requests are not covered.
+             */
+            rebaseBots: boolean;
+            /**
              * @description Whether the signed-in user has turned on automatic branch
              *     updates for this repo — any of its pull requests the
              *     background refresh finds behind its base branch gets updated
@@ -5458,6 +5514,86 @@ export interface operations {
         };
         responses: {
             /** @description Auto-update-branch is now off for this repo (or never was on). */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description The request body wasn't valid JSON, or `fullName` wasn't "owner/repo". */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description No valid session cookie was presented. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
+    enableRebaseBots: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["WebhookEnsureRequest"];
+            };
+        };
+        responses: {
+            /** @description Rebasing bot pull requests is now on for this repo (or already was). */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description The request body wasn't valid JSON, or `fullName` wasn't "owner/repo". */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description No valid session cookie was presented. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
+    disableRebaseBots: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["WebhookEnsureRequest"];
+            };
+        };
+        responses: {
+            /** @description Rebasing bot pull requests is now off for this repo (or never was on). */
             204: {
                 headers: {
                     [name: string]: unknown;
