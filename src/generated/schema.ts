@@ -897,7 +897,7 @@ export interface paths {
          * Cancel one running or queued Actions workflow run, on the signed-in user's behalf
          * @description Asks the forge to cancel a whole workflow run: every job of it stops,
          *     because neither GitHub nor Forgejo can stop one job of a running
-         *     workflow. A client takes `runId` from a check in a `checks` event on
+         *     workflow. A client takes `runId` from a check in a `run` event on
          *     GET /api/dashboard/stream, from a job that is still queued or running.
          *     A check with no `runId` (a third-party check, a legacy commit status,
          *     an external CI) belongs to no Actions run and can't be cancelled
@@ -1586,10 +1586,11 @@ export interface paths {
          *
          *     A client that passes `sid` can also follow the job lists of the
          *     pull requests and default branches it has open, through
-         *     `POST /api/dashboard/stream/watch`. Each list arrives as a named
-         *     `checks` event on this stream, so a client that only listens for
-         *     default messages never sees one. A reconnect reuses the same
-         *     `sid` with nothing watched, so the client sends its watch again.
+         *     `POST /api/dashboard/stream/watch`. Each list arrives as named
+         *     `run` events on this stream, one for each workflow run attempt, so a
+         *     client that only listens for default messages never sees one. A
+         *     reconnect reuses the same `sid` with nothing watched, so the client
+         *     sends its watch again.
          */
         get: operations["streamDashboard"];
         put?: never;
@@ -1612,7 +1613,7 @@ export interface paths {
         /**
          * Choose which job lists a dashboard stream sends
          * @description Replaces the set of pull requests and default branches whose job
-         *     lists the stream named by `streamId` sends as `checks` events.
+         *     lists the stream named by `streamId` sends as `run` events.
          *     The server lists a subject when it is newly watched, when its row
          *     in a new snapshot changed (CI state, check counts, or a branch's
          *     run), and when `refresh` is true. Nothing else costs a forge
@@ -1620,7 +1621,12 @@ export interface paths {
          *     and every snapshot after it tries again, changed or not, until a
          *     listing works.
          *
-         *     The event is the JSON of the `CheckListEvent` schema.
+         *     A listing is one event for each workflow run attempt the subject
+         *     holds, then one with `gone` set for each run attempt the last
+         *     listing sent and this one lacks. The last event of a listing has
+         *     `final` set. A rerun keeps its run id and takes a new attempt, so
+         *     its event carries a new `key` and the first attempt's key comes
+         *     back as gone. The event is the JSON of the `RunEvent` schema.
          */
         post: operations["watchDashboardStreamChecks"];
         delete?: never;
@@ -2983,12 +2989,39 @@ export interface components {
             refresh?: boolean;
         };
         /**
-         * @description The `data` of a `checks` event on the dashboard stream: one
-         *     subject and its job list, or why it could not be listed.
+         * @description The `data` of a `run` event on the dashboard stream: the jobs of
+         *     one workflow run attempt of one subject, or one check that belongs
+         *     to no run. A later event with the same `key` replaces the earlier
+         *     one. An event with no `key` and no `checks` says the subject has
+         *     none. An event with `error` set stands in for the whole listing.
          */
-        CheckListEvent: components["schemas"]["CheckSubject"] & {
-            /** @description Null when `error` is set. */
-            checks: components["schemas"]["Check"][] | null;
+        RunEvent: components["schemas"]["CheckSubject"] & {
+            /**
+             * @description Names the unit this event replaces: `run/<runId>/<attempt>`
+             *     for a run attempt, `job/<url>|<name>` for a check with no
+             *     run. Absent when the subject has no checks or on an error.
+             */
+            key?: string;
+            /**
+             * Format: int64
+             * @description Absent for a check with no run.
+             */
+            runId?: number;
+            /**
+             * Format: int64
+             * @description Absent when the check has no run or the forge doesn't
+             *     number attempts.
+             */
+            runAttempt?: number;
+            /** @description Absent when `gone` or `error` is set. */
+            checks?: components["schemas"]["Check"][];
+            /** @description The unit named by `key` is no longer listed; drop it. */
+            gone?: boolean;
+            /**
+             * @description Set on the last event of a listing, so a client can draw
+             *     once the whole listing has arrived.
+             */
+            final?: boolean;
             error?: string;
         };
         /**
@@ -7527,15 +7560,15 @@ export interface operations {
             /**
              * @description An SSE stream. Each event's `data` field is a JSON-encoded
              *     snapshot, identical in shape to GET /api/dashboard's
-             *     response body. A named `checks` event carries a
-             *     `CheckListEvent` instead.
+             *     response body. A named `run` event carries a `RunEvent`
+             *     instead.
              */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "text/event-stream": components["schemas"]["Dashboard"] | components["schemas"]["CheckListEvent"];
+                    "text/event-stream": components["schemas"]["Dashboard"] | components["schemas"]["RunEvent"];
                 };
             };
             /** @description No valid session cookie was presented. */
