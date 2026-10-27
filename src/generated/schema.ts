@@ -897,9 +897,8 @@ export interface paths {
          * Cancel one running or queued Actions workflow run, on the signed-in user's behalf
          * @description Asks the forge to cancel a whole workflow run: every job of it stops,
          *     because neither GitHub nor Forgejo can stop one job of a running
-         *     workflow. A client takes `runId` from a check in a checks list
-         *     (`GET /api/pull-requests/checks` or `GET /api/main-branches/checks`),
-         *     where a job that is still queued or running carries the id and name of
+         *     workflow. A client takes `runId` from a check in a `checks` event on
+         *     GET /api/dashboard/stream, where a job that is still queued or running carries the id and name of
          *     its run. A check with no `runId` (a third-party check, a legacy commit
          *     status, an external CI) belongs to no Actions run and can't be
          *     cancelled here.
@@ -1149,36 +1148,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/pull-requests/checks": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * List every job/check run against a pull request's head commit, on demand
-         * @description Fetched live on every call, never as part of GET /api/dashboard's
-         *     own snapshot — this is detail a pull request's row doesn't show
-         *     until a caller actually asks for it, and adding it to the eager
-         *     refresh loop would multiply that refresh's cost by every open
-         *     pull request for data most of them are never opened for.
-         *
-         *     Falls back to the legacy combined commit-status API's own
-         *     per-check entries when the forge reports no Actions runs at all
-         *     for that commit (Actions disabled, or an instance too old to
-         *     expose them) — never an error for that case specifically, since
-         *     it's a normal, expected shape for an older or CI-less repo.
-         */
-        get: operations["getPullRequestChecks"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/api/pull-requests/details": {
         parameters: {
             query?: never;
@@ -1214,9 +1183,7 @@ export interface paths {
          *     (a GitHub repository's logo, see `logoUrl` on a repo in GET
          *     /api/dashboard) and the Forgejo host.
          *
-         *     The error answers are those of GET /api/pull-requests/checks, with
-         *     the same codes. A forge that can't be read is an error, never an
-         *     empty thread.
+         *     A forge that can't be read is an error, never an empty thread.
          */
         get: operations["getPullRequestDetails"];
         put?: never;
@@ -1830,48 +1797,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/main-branches/checks": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * List every job/check of a repository's default-branch pipeline, on demand
-         * @description The jobs behind one Main branches row's status: the same `Check` list,
-         *     in the same response shape, as GET /api/pull-requests/checks, so one
-         *     pipeline panel shows either. Fetched live on every call, never as part
-         *     of GET /api/main-branches' snapshot, for the same reason a pull
-         *     request's jobs are not: a job list for every row would spend the
-         *     forge's budget on rows nobody opens.
-         *
-         *     The commit is the one the row reports: the newest commit on the
-         *     default branch that a check ran on. A release bot's commit that skips
-         *     CI has none, so the commit before it answers. `required` is never set,
-         *     since it is a pull request's base-branch notion.
-         *
-         *     GitHub reads the newest commits' check runs (one request for the
-         *     commits, one per commit until a check is found, and up to 2 more per
-         *     failed job for its failed step). Forgejo reads the repository, the
-         *     Actions runs of the default branch and each run's jobs, the same
-         *     reading GET /api/main-branches counts its `checks` from, so the list
-         *     and the counts describe the same jobs. A run whose jobs can't be read
-         *     is listed as one check named after its workflow.
-         *
-         *     Empty when the repository has no default branch, no commit with a
-         *     check, or no run. The error answers are those of GET
-         *     /api/pull-requests/checks.
-         */
-        get: operations["getMainBranchChecks"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/api/main-branches/advisories": {
         parameters: {
             query?: never;
@@ -1935,7 +1860,7 @@ export interface paths {
          * Rerun only the failed jobs of a repository's default-branch pipeline, on the signed-in user's behalf
          * @description The branch twin of POST /api/pull-requests/rerun-checks. Asks the forge
          *     to rerun the failed jobs of the Actions workflow runs on the commit
-         *     GET /api/main-branches/checks lists, and nothing that passed. It
+         *     the branch's job list shows, and nothing that passed. It
          *     answers once the forge has queued them, not when they finish, so a
          *     client shows a queued state and lets the next refresh carry the result.
          *
@@ -3020,9 +2945,6 @@ export interface components {
             commentCount: number;
             /** @description True when `commentCount` is more than the comments returned. */
             commentsTruncated: boolean;
-        };
-        PullRequestChecksResponse: {
-            checks: components["schemas"]["Check"][];
         };
         CheckSubject: {
             /** @enum {string} */
@@ -6782,86 +6704,6 @@ export interface operations {
             };
         };
     };
-    getPullRequestChecks: {
-        parameters: {
-            query: {
-                forge: components["schemas"]["Forge"];
-                /** @description "owner/repo", matching a Repo.fullName from GET /api/dashboard. */
-                fullName: string;
-                /** @description Matching a PullRequest.number from GET /api/dashboard. */
-                number: number;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Every check/job found for that commit — empty when none were. */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["PullRequestChecksResponse"];
-                };
-            };
-            /** @description `number` wasn't an integer, `fullName` wasn't "owner/repo", no credentials are saved for that forge, or that forge's client doesn't support listing pull request checks at all. */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["Error"];
-                };
-            };
-            /** @description No valid session cookie was presented. */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["Error"];
-                };
-            };
-            /** @description The forge rejected the request as unauthorized — the saved token's scope doesn't cover reading checks, or it isn't allowed to see that repo. */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["Error"];
-                };
-            };
-            /** @description The forge reported the repo or pull request doesn't exist (or isn't visible to this token). */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["Error"];
-                };
-            };
-            /** @description The forge rate-limited the request. */
-            429: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["Error"];
-                };
-            };
-            /** @description The forge was unreachable, or answered with something this app couldn't classify more specifically. */
-            502: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["Error"];
-                };
-            };
-        };
-    };
     getPullRequestDetails: {
         parameters: {
             query: {
@@ -7984,84 +7826,6 @@ export interface operations {
             };
             /** @description The dashboard has not loaded your repositories yet (a cold start or an outage), so it cannot say whether the repository is tracked. Retry shortly. */
             503: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["Error"];
-                };
-            };
-        };
-    };
-    getMainBranchChecks: {
-        parameters: {
-            query: {
-                forge: components["schemas"]["Forge"];
-                /** @description "owner/repo", matching a MainBranch.fullName from GET /api/main-branches. */
-                fullName: string;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Every check/job found for the default branch's newest checked commit, empty when none were. */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["PullRequestChecksResponse"];
-                };
-            };
-            /** @description `fullName` wasn't "owner/repo", no credentials are saved for that forge, or that forge's client doesn't support listing default branch checks at all. */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["Error"];
-                };
-            };
-            /** @description No valid session cookie or token was presented. */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["Error"];
-                };
-            };
-            /** @description The forge rejected the request as unauthorized, the saved token's scope doesn't cover reading checks or it isn't allowed to see that repo. */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["Error"];
-                };
-            };
-            /** @description The forge reported the repo doesn't exist (or isn't visible to this token). */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["Error"];
-                };
-            };
-            /** @description The forge rate-limited the request. */
-            429: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["Error"];
-                };
-            };
-            /** @description The forge was unreachable, or answered with something this app couldn't classify more specifically. */
-            502: {
                 headers: {
                     [name: string]: unknown;
                 };
