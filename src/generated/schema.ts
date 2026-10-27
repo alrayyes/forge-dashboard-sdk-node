@@ -1616,10 +1616,46 @@ export interface paths {
          *     `includeDrafts` is read once, when the connection opens, and
          *     applies to every event on it. A client that changes its mind
          *     reconnects with the new value.
+         *
+         *     A client that passes `sid` can also follow the job lists of the
+         *     pull requests and default branches it has open, through
+         *     `POST /api/dashboard/stream/watch`. Each list arrives as a named
+         *     `checks` event on this stream, so a client that only listens for
+         *     default messages never sees one. A reconnect reuses the same
+         *     `sid` with nothing watched, so the client sends its watch again.
          */
         get: operations["streamDashboard"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/dashboard/stream/watch": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Choose which job lists a dashboard stream sends
+         * @description Replaces the set of pull requests and default branches whose job
+         *     lists the stream named by `streamId` sends as `checks` events.
+         *     The server lists a subject when it is newly watched, when its row
+         *     in a new snapshot changed (CI state, check counts, or a branch's
+         *     run), and when `refresh` is true. Nothing else costs a forge
+         *     request. A failed listing is sent as an event with `error` set,
+         *     and every snapshot after it tries again, changed or not, until a
+         *     listing works.
+         *
+         *     The event is the JSON of the `CheckListEvent` schema.
+         */
+        post: operations["watchDashboardStreamChecks"];
         delete?: never;
         options?: never;
         head?: never;
@@ -2987,6 +3023,34 @@ export interface components {
         };
         PullRequestChecksResponse: {
             checks: components["schemas"]["Check"][];
+        };
+        CheckSubject: {
+            /** @enum {string} */
+            kind: "pull_request" | "main_branch";
+            forge: string;
+            /** @description The repository, as `owner/repo`. */
+            fullName: string;
+            /** @description The pull request number. Required for `pull_request`. */
+            number?: number;
+        };
+        StreamWatchRequest: {
+            /** @description The `sid` the stream was opened with. */
+            streamId: string;
+            subjects: components["schemas"]["CheckSubject"][];
+            /**
+             * @description List every subject again, including the ones already watched.
+             *     A client sends it after an action that changes the jobs.
+             */
+            refresh?: boolean;
+        };
+        /**
+         * @description The `data` of a `checks` event on the dashboard stream: one
+         *     subject and its job list, or why it could not be listed.
+         */
+        CheckListEvent: components["schemas"]["CheckSubject"] & {
+            /** @description Null when `error` is set. */
+            checks: components["schemas"]["Check"][] | null;
+            error?: string;
         };
         /**
          * @description A pull request's mergeable/blocked state, as coarse as every forge
@@ -7588,6 +7652,12 @@ export interface operations {
                  *     take the same parameter.
                  */
                 includeHidden?: components["parameters"]["QueryIncludeHidden"];
+                /**
+                 * @description A random id the client makes up for this connection, 8 to 64
+                 *     letters, digits and dashes. It names the stream for the watch
+                 *     call. Anything else is ignored and the stream watches nothing.
+                 */
+                sid?: string;
             };
             header?: never;
             path?: never;
@@ -7598,14 +7668,15 @@ export interface operations {
             /**
              * @description An SSE stream. Each event's `data` field is a JSON-encoded
              *     snapshot, identical in shape to GET /api/dashboard's
-             *     response body.
+             *     response body. A named `checks` event carries a
+             *     `CheckListEvent` instead.
              */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "text/event-stream": components["schemas"]["Dashboard"];
+                    "text/event-stream": components["schemas"]["Dashboard"] | components["schemas"]["CheckListEvent"];
                 };
             };
             /** @description No valid session cookie was presented. */
@@ -7618,6 +7689,58 @@ export interface operations {
                 };
             };
             /** @description No background refresh is running yet — Settings has never been saved. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
+    watchDashboardStreamChecks: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["StreamWatchRequest"];
+            };
+        };
+        responses: {
+            /** @description The watch is set. The lists follow on the stream. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /**
+             * @description The body is not valid, a subject is malformed, or there are more
+             *     than 8 subjects.
+             */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description No valid session cookie was presented. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description No open stream has that id. */
             404: {
                 headers: {
                     [name: string]: unknown;
