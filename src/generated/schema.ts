@@ -3032,6 +3032,38 @@ export interface components {
              *     number attempts.
              */
             runAttempt?: number;
+            /**
+             * @description How far the run attempt itself has got, as the forge reports
+             *     it. Forgejo's own status words fold onto the four values
+             *     (running is `in_progress`; waiting, blocked and unknown are
+             *     `queued`); a GitHub status other than these four (requested,
+             *     pending) is `queued`. Absent for a check with no run (a
+             *     legacy commit status, a third-party check run, a GitHub
+             *     check run whose run the forge's lists don't hold) and for a
+             *     run the forge gave no status.
+             */
+            status?: components["schemas"]["CheckStatus"];
+            /**
+             * @description How the run attempt ended, in the forge's own word, once its
+             *     `status` is "completed". It can differ from its jobs: a run
+             *     can fail while one of its jobs passed. Absent whenever
+             *     `status` is.
+             */
+            conclusion?: components["schemas"]["CheckConclusion"];
+            /**
+             * Format: date-time
+             * @description When the forge says the run attempt started. Absent until it
+             *     has, and when the forge doesn't say.
+             */
+            startedAt?: string;
+            /**
+             * Format: date-time
+             * @description When the forge says the run attempt finished. Absent until it
+             *     has. GitHub gives no finish time for a run, so it is always
+             *     absent there; the page can take the latest job's
+             *     `completedAt`.
+             */
+            completedAt?: string;
             /** @description Absent when `gone` or `error` is set. */
             checks?: components["schemas"]["Check"][];
             /** @description The unit named by `key` is no longer listed; drop it. */
