@@ -2675,20 +2675,26 @@ export interface components {
             skipped: number;
         };
         /**
-         * @description One job/check's own status — the per-job detail CIStatus
-         *     deliberately doesn't carry, since CIStatus is the combined result
-         *     across every one of them.
+         * @description How far one job has got, as a fact. The page works out what to show
+         *     from it and `conclusion`.
          *
-         *     "awaiting_approval" is a GitHub workflow run held until a
-         *     maintainer approves it. It has no jobs yet, so it is not queued and
-         *     not failed; its `url` is the run's page, where the approve button is.
+         *     "waiting" is a GitHub workflow run held until a maintainer approves
+         *     it. It has no jobs yet, so it is not queued and has not failed; its
+         *     `url` is the run's page, where the approve button is.
          * @enum {string}
          */
-        CheckState: "queued" | "running" | "success" | "failure" | "cancelled" | "skipped" | "timed_out" | "awaiting_approval";
+        CheckStatus: "queued" | "in_progress" | "completed" | "waiting";
+        /**
+         * @description How a finished job ended. Sent only when `status` is "completed".
+         *     Both forges' own results are folded onto these five.
+         * @enum {string}
+         */
+        CheckConclusion: "success" | "failure" | "cancelled" | "skipped" | "timed_out";
         /** @description One job/check run against a pull request's head commit. */
         Check: {
             name: string;
-            state: components["schemas"]["CheckState"];
+            status: components["schemas"]["CheckStatus"];
+            conclusion?: components["schemas"]["CheckConclusion"];
             /** @description That job's own page on the forge that ran it — never the pull request's own page. */
             url: string;
             /**
@@ -2701,7 +2707,7 @@ export interface components {
              * @description The Actions workflow run this job belongs to, to pass to
              *     `POST /api/checks/cancel-run`. Present on every Actions job,
              *     finished or not; only a job that is queued or running has
-             *     anything left to cancel, which a client reads from `state`. A
+             *     anything left to cancel, which a client reads from `status`. A
              *     third-party check and a legacy commit status have none.
              *
              *     A Forgejo run whose jobs couldn't be read is listed as one check
