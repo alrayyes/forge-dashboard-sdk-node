@@ -2730,11 +2730,19 @@ export interface components {
              */
             required?: boolean;
             /**
-             * @description How long a completed check ran. Absent while it runs, or when
-             *     the forge doesn't say. GitHub only: Forgejo's API doesn't give
-             *     a job's timing.
+             * Format: date-time
+             * @description When the forge says the job started. Absent until it has, and when
+             *     the forge doesn't say. GitHub only: Forgejo's API doesn't give a
+             *     job's timing. A client works out how long a job ran from this and
+             *     `completedAt`.
              */
-            durationSeconds?: number;
+            startedAt?: string;
+            /**
+             * Format: date-time
+             * @description When the forge says the job finished. Absent while it runs, and
+             *     when the forge doesn't say. GitHub only, like `startedAt`.
+             */
+            completedAt?: string;
             /**
              * @description Which attempt of its workflow run the job belongs to. Forgejo
              *     only: it keeps a job's id and page when a run is retried, so this
