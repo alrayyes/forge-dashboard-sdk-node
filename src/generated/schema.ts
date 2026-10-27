@@ -2686,16 +2686,35 @@ export interface components {
          *
          *     "waiting" is a GitHub workflow run held until a maintainer approves
          *     it. It has no jobs yet, so it is not queued and has not failed; its
-         *     `url` is the run's page, where the approve button is.
+         *     `url` is the run's page, where the approve button is. A check run
+         *     that finishes as `action_required` is the other shape of the same
+         *     wait: it is "completed" with that conclusion. The page treats the
+         *     two alike.
          * @enum {string}
          */
         CheckStatus: "queued" | "in_progress" | "completed" | "waiting";
         /**
-         * @description How a finished job ended. Sent only when `status` is "completed".
-         *     Both forges' own results are folded onto these five.
-         * @enum {string}
+         * @description How a finished job ended, in the forge's own word. Sent only when
+         *     `status` is "completed". It is not folded onto a fixed set: GitHub
+         *     sends its check run conclusion as it is (`success`, `failure`,
+         *     `neutral`, `cancelled`, `skipped`, `timed_out`, `action_required`,
+         *     `stale`, `startup_failure`) and Forgejo sends the terminal status of
+         *     the job (`success`, `failure`, `cancelled`, `skipped`). A legacy
+         *     commit status, which has no conclusion, is sent as `success` or
+         *     `failure`. A client decides what each word means and what to do
+         *     with one it doesn't know.
+         *
+         *     `action_required` means the job needs someone's approval, and `url`
+         *     is where to give it. The page shows it as waiting for approval,
+         *     the same as a held run whose `status` is "waiting".
+         * @example success
+         * @example failure
+         * @example cancelled
+         * @example skipped
+         * @example timed_out
+         * @example neutral
          */
-        CheckConclusion: "success" | "failure" | "cancelled" | "skipped" | "timed_out";
+        CheckConclusion: string;
         /** @description One job/check run against a pull request's head commit. */
         Check: {
             name: string;
