@@ -3136,7 +3136,9 @@ export interface components {
              *     response are the last good ones, fetched at this time, instead of
              *     none. Absent when the data
              *     is current, and for a forge that has never fetched successfully,
-             *     which has nothing to show. A client can say "unreachable, showing
+             *     which has nothing to show. A forge that has not answered within
+             *     three minutes counts as failed, so a hung forge does not hold
+             *     back the others. A client can say "unreachable, showing
              *     data from 3 minutes ago".
              */
             staleSince?: string;
