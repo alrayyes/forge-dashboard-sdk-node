@@ -4116,6 +4116,17 @@ export interface components {
             runUrl: string;
             checks: components["schemas"]["CheckCounts"];
             /**
+             * @description What each workflow run attempt on the newest commit did, the
+             *     facts `status`, `failingJobs` and `checks` were worked out from,
+             *     in the order the forge listed them. A client can fold them into
+             *     its own pill. They are the jobs `GET /api/main-branches/checks`
+             *     lists, grouped as the stream's `run` events group them. Present
+             *     for a Forgejo repository with at least one run; absent for a
+             *     GitHub repository, whose refresh reads counts rather than runs,
+             *     and for a repository with no run.
+             */
+            runs?: components["schemas"]["MainBranchRun"][];
+            /**
              * @description The repository's latest published release, for a link to its
              *     notes. Null when the repository has none, when its only releases
              *     are drafts or pre-releases, and for every Forgejo repository,
@@ -4255,6 +4266,40 @@ export interface components {
             percentage: number;
             /** @description How the score ranks among all scored flaws, as a fraction from 0 to 1. */
             percentile: number;
+        };
+        /**
+         * @description The jobs of one workflow run attempt on a default branch's newest
+         *     commit, shaped like the stream's `RunEvent` without its subject, key
+         *     and listing markers. The server works nothing out from them; the page
+         *     decides what they add up to.
+         */
+        MainBranchRun: {
+            /**
+             * Format: int64
+             * @description Absent for a check that belongs to no run.
+             */
+            runId?: number;
+            /**
+             * Format: int64
+             * @description Absent when the forge doesn't number attempts.
+             */
+            runAttempt?: number;
+            /** @description How far the run attempt itself has got, as the forge reports it. Absent when the forge gave none. */
+            status?: components["schemas"]["CheckStatus"];
+            /** @description How the run attempt ended, once its `status` is "completed". Absent whenever `status` is. */
+            conclusion?: components["schemas"]["CheckConclusion"];
+            /**
+             * Format: date-time
+             * @description When the forge says the run attempt started. Absent until it has.
+             */
+            startedAt?: string;
+            /**
+             * Format: date-time
+             * @description When the forge says the run attempt finished. Absent until it has.
+             */
+            completedAt?: string;
+            /** @description The run attempt's jobs, or the run itself as one check when its jobs couldn't be read. */
+            checks: components["schemas"]["Check"][];
         };
         /** @description A repository's latest published release. */
         MainBranchRelease: {
