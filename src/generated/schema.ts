@@ -4298,6 +4298,14 @@ export interface components {
              * @description When the forge says the run attempt finished. Absent until it has.
              */
             completedAt?: string;
+            /**
+             * @description True when the forge has more jobs for this run attempt than `checks`
+             *     lists, because the job list was cut short. Absent when the list is
+             *     whole. A page that folds jobs can't tell a cut list from a whole one,
+             *     so it keeps the row's own `status` and `checks` while any run says
+             *     this.
+             */
+            jobsTruncated?: boolean;
             /** @description The run attempt's jobs, or the run itself as one check when its jobs couldn't be read. */
             checks: components["schemas"]["Check"][];
         };
