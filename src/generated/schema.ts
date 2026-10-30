@@ -4,7 +4,7 @@
  */
 
 export interface paths {
-    "/api/auth/registration-status": {
+    "/api/v1/auth/registration-status": {
         parameters: {
             query?: never;
             header?: never;
@@ -29,7 +29,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/auth/register/begin": {
+    "/api/v1/auth/register/begin": {
         parameters: {
             query?: never;
             header?: never;
@@ -41,7 +41,7 @@ export interface paths {
         /**
          * Start a passkey registration ceremony
          * @description An instance has one user. The first registration on a fresh
-         *     instance (see GET /api/auth/registration-status) creates that
+         *     instance (see GET /api/v1/auth/registration-status) creates that
          *     user and the server names it, so the request carries no body. The
          *     options require a resident key, so the passkey can be found at
          *     sign-in without being named. Once any account holds a passkey, this
@@ -54,7 +54,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/auth/register/finish": {
+    "/api/v1/auth/register/finish": {
         parameters: {
             query?: never;
             header?: never;
@@ -71,7 +71,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/auth/login/begin": {
+    "/api/v1/auth/login/begin": {
         parameters: {
             query?: never;
             header?: never;
@@ -94,7 +94,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/auth/login/finish": {
+    "/api/v1/auth/login/finish": {
         parameters: {
             query?: never;
             header?: never;
@@ -111,7 +111,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/auth/logout": {
+    "/api/v1/auth/logout": {
         parameters: {
             query?: never;
             header?: never;
@@ -128,7 +128,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/auth/session": {
+    "/api/v1/auth/session": {
         parameters: {
             query?: never;
             header?: never;
@@ -145,7 +145,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/auth/credentials": {
+    "/api/v1/auth/credentials": {
         parameters: {
             query?: never;
             header?: never;
@@ -166,7 +166,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/auth/credentials/begin": {
+    "/api/v1/auth/credentials/begin": {
         parameters: {
             query?: never;
             header?: never;
@@ -177,7 +177,7 @@ export interface paths {
         put?: never;
         /**
          * Start a ceremony to add another passkey to the signed-in account
-         * @description The authenticated counterpart to POST /api/auth/register/begin —
+         * @description The authenticated counterpart to POST /api/v1/auth/register/begin —
          *     that one only ever works for a brand-new, credential-less
          *     account; this is how an already-registered user adds a second
          *     (or third...) passkey, e.g. a laptop and a security key. Like the
@@ -190,7 +190,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/auth/credentials/finish": {
+    "/api/v1/auth/credentials/finish": {
         parameters: {
             query?: never;
             header?: never;
@@ -207,7 +207,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/auth/credentials/{id}": {
+    "/api/v1/auth/credentials/{id}": {
         parameters: {
             query?: never;
             header?: never;
@@ -237,7 +237,7 @@ export interface paths {
         patch: operations["renameCredential"];
         trace?: never;
     };
-    "/api/settings": {
+    "/api/v1/settings": {
         parameters: {
             query?: never;
             header?: never;
@@ -250,7 +250,7 @@ export interface paths {
          *     webhook token and secret are returned, since the user pastes them
          *     into the forge's webhook setup, and a first read creates them. For
          *     a read that creates nothing and omits both, see
-         *     `GET /api/settings/summary`.
+         *     `GET /api/v1/settings/summary`.
          */
         get: operations["getSettings"];
         /**
@@ -269,7 +269,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/settings/summary": {
+    "/api/v1/settings/summary": {
         parameters: {
             query?: never;
             header?: never;
@@ -278,7 +278,7 @@ export interface paths {
         };
         /**
          * The signed-in user's settings, read without side effects
-         * @description The same data as `GET /api/settings`, minus the webhook token and
+         * @description The same data as `GET /api/v1/settings`, minus the webhook token and
          *     secret, plus `webhookConfigured`. It never provisions webhook
          *     credentials: for a user who has none yet it answers
          *     `webhookConfigured: false` and creates nothing. Forge tokens are
@@ -294,7 +294,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/settings/theme": {
+    "/api/v1/settings/theme": {
         parameters: {
             query?: never;
             header?: never;
@@ -305,7 +305,7 @@ export interface paths {
          * The signed-in user's own saved theme preference
          * @description A lightweight, side-effect-free read of one field — theme — for
          *     every page to check on load. Deliberately not
-         *     GET /api/settings itself: that handler also provisions webhook
+         *     GET /api/v1/settings itself: that handler also provisions webhook
          *     credentials on first call (EnsureWebhookCredentials), which
          *     every page loading shouldn't trigger for a user who's never
          *     opened Settings at all.
@@ -314,7 +314,7 @@ export interface paths {
         /**
          * Save the signed-in user's own theme preference
          * @description A dedicated, instant save — deliberately not routed
-         *     through the main PUT /api/settings, whose every other field is
+         *     through the main PUT /api/v1/settings, whose every other field is
          *     a plain replace rather than a per-field merge: a request
          *     carrying only theme through that handler would blank every
          *     other saved setting. Picking a theme applies immediately, the
@@ -330,7 +330,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/settings/timezone": {
+    "/api/v1/settings/timezone": {
         parameters: {
             query?: never;
             header?: never;
@@ -341,13 +341,13 @@ export interface paths {
          * The signed-in user's own saved time zone
          * @description A lightweight, side-effect-free read of one field, for every page to
          *     check on load so it can show times in the user's zone. Deliberately
-         *     not GET /api/settings, for the reason GET /api/settings/theme isn't.
+         *     not GET /api/v1/settings, for the reason GET /api/v1/settings/theme isn't.
          *     Empty means "use the browser's own zone".
          */
         get: operations["getTimezone"];
         /**
          * Save the signed-in user's own time zone
-         * @description A dedicated, instant save, not routed through PUT /api/settings,
+         * @description A dedicated, instant save, not routed through PUT /api/v1/settings,
          *     which replaces every other field. Exists for browsers that report
          *     UTC to every page, such as Firefox with fingerprint resistance.
          */
@@ -359,7 +359,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/settings/filter-state": {
+    "/api/v1/settings/filter-state": {
         parameters: {
             query?: never;
             header?: never;
@@ -369,7 +369,7 @@ export interface paths {
         /**
          * The signed-in user's own saved dashboard/Insights filter state
          * @description A lightweight read of one opaque blob, deliberately not
-         *     GET /api/settings itself for the same reason GET /api/settings/theme
+         *     GET /api/v1/settings itself for the same reason GET /api/v1/settings/theme
          *     isn't either: this loads on every dashboard/Insights visit and
          *     shouldn't provision webhook credentials as a side effect.
          *     `{}` for a user who's never saved any filters yet, not a 404.
@@ -380,7 +380,7 @@ export interface paths {
         /**
          * Save the signed-in user's own dashboard/Insights filter state
          * @description A dedicated, lightweight save separate from the main
-         *     PUT /api/settings — filters change on nearly every click, a
+         *     PUT /api/v1/settings — filters change on nearly every click, a
          *     mismatch for that endpoint's "always a full form submit"
          *     convention. The body replaces the saved state entirely,
          *     the same "always a full submit, just of a much smaller and
@@ -400,7 +400,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/tokens": {
+    "/api/v1/tokens": {
         parameters: {
             query?: never;
             header?: never;
@@ -421,7 +421,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/tokens/{id}": {
+    "/api/v1/tokens/{id}": {
         parameters: {
             query?: never;
             header?: never;
@@ -445,7 +445,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/webhooks/ensure": {
+    "/api/v1/webhooks/ensure": {
         parameters: {
             query?: never;
             header?: never;
@@ -459,7 +459,7 @@ export interface paths {
          * @description Creates a webhook on the named repo, pointed at the signed-in
          *     user's own webhook URL and secret, subscribed to the events
          *     docs/webhooks.md's manual steps recommend. If one already exists
-         *     there (found the same way GET /api/dashboard's own `hasWebhook`
+         *     there (found the same way GET /api/v1/dashboard's own `hasWebhook`
          *     does — matching by URL path, not object identity) it's brought
          *     back to active with the right events instead of creating a
          *     duplicate.
@@ -484,7 +484,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/repos/ignore": {
+    "/api/v1/repos/ignore": {
         parameters: {
             query?: never;
             header?: never;
@@ -496,7 +496,7 @@ export interface paths {
         /**
          * Hide one tracked repo's pull requests, issues, or both from the dashboard and Insights
          * @description Reversible, not destructive: the repo itself keeps
-         *     appearing in GET /api/dashboard's `repos` array with accurate
+         *     appearing in GET /api/v1/dashboard's `repos` array with accurate
          *     webhook-coverage status, and keeps being fetched and counted —
          *     only the pullRequests and/or issues entries the request scopes
          *     stop appearing there and on Insights. A repeat call
@@ -512,7 +512,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/repos/unignore": {
+    "/api/v1/repos/unignore": {
         parameters: {
             query?: never;
             header?: never;
@@ -523,7 +523,7 @@ export interface paths {
         put?: never;
         /**
          * Stop ignoring one tracked repo
-         * @description The reverse of POST /api/repos/ignore. Idempotent: un-ignoring a
+         * @description The reverse of POST /api/v1/repos/ignore. Idempotent: un-ignoring a
          *     repo that was never ignored is a no-op, not an error.
          */
         post: operations["unignoreRepo"];
@@ -533,7 +533,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/repos/auto-update-branch/enable": {
+    "/api/v1/repos/auto-update-branch/enable": {
         parameters: {
             query?: never;
             header?: never;
@@ -558,7 +558,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/repos/auto-update-branch/disable": {
+    "/api/v1/repos/auto-update-branch/disable": {
         parameters: {
             query?: never;
             header?: never;
@@ -569,7 +569,7 @@ export interface paths {
         put?: never;
         /**
          * Turn off automatic branch updates for one tracked repo
-         * @description The reverse of POST /api/repos/auto-update-branch/enable.
+         * @description The reverse of POST /api/v1/repos/auto-update-branch/enable.
          *     Idempotent: disabling a repo that was never enabled is a no-op,
          *     not an error.
          */
@@ -580,7 +580,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/repos/rebase-bots/enable": {
+    "/api/v1/repos/rebase-bots/enable": {
         parameters: {
             query?: never;
             header?: never;
@@ -607,7 +607,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/repos/rebase-bots/disable": {
+    "/api/v1/repos/rebase-bots/disable": {
         parameters: {
             query?: never;
             header?: never;
@@ -618,7 +618,7 @@ export interface paths {
         put?: never;
         /**
          * Stop rebasing Dependabot and Renovate pull requests for one tracked repo
-         * @description The reverse of POST /api/repos/rebase-bots/enable. Idempotent:
+         * @description The reverse of POST /api/v1/repos/rebase-bots/enable. Idempotent:
          *     disabling a repo that was never enabled is a no-op, not an error.
          */
         post: operations["disableRebaseBots"];
@@ -628,7 +628,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/pull-requests/merge": {
+    "/api/v1/pull-requests/merge": {
         parameters: {
             query?: never;
             header?: never;
@@ -673,7 +673,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/pull-requests/auto-merge": {
+    "/api/v1/pull-requests/auto-merge": {
         parameters: {
             query?: never;
             header?: never;
@@ -728,7 +728,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/pull-requests/auto-merge/cancel": {
+    "/api/v1/pull-requests/auto-merge/cancel": {
         parameters: {
             query?: never;
             header?: never;
@@ -739,7 +739,7 @@ export interface paths {
         put?: never;
         /**
          * Cancel auto-merge on a pull request, on the signed-in user's behalf
-         * @description Forgejo: removes the intent stored by `POST /api/pull-requests/auto-merge`,
+         * @description Forgejo: removes the intent stored by `POST /api/v1/pull-requests/auto-merge`,
          *     so the background pass never merges the pull request. Nothing is sent
          *     to the forge. Idempotent: a pull request with no intent is a 204 too.
          *
@@ -756,7 +756,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/pull-requests/close": {
+    "/api/v1/pull-requests/close": {
         parameters: {
             query?: never;
             header?: never;
@@ -787,7 +787,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/pull-requests/reopen": {
+    "/api/v1/pull-requests/reopen": {
         parameters: {
             query?: never;
             header?: never;
@@ -823,7 +823,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/pull-requests/rerun-checks": {
+    "/api/v1/pull-requests/rerun-checks": {
         parameters: {
             query?: never;
             header?: never;
@@ -884,7 +884,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/checks/cancel-run": {
+    "/api/v1/checks/cancel-run": {
         parameters: {
             query?: never;
             header?: never;
@@ -898,7 +898,7 @@ export interface paths {
          * @description Asks the forge to cancel a whole workflow run: every job of it stops,
          *     because neither GitHub nor Forgejo can stop one job of a running
          *     workflow. A client takes `runId` from a check in a `run` event on
-         *     GET /api/dashboard/stream, from a job that is still queued or running.
+         *     GET /api/v1/dashboard/stream, from a job that is still queued or running.
          *     A check with no `runId` (a third-party check, a legacy commit status,
          *     an external CI) belongs to no Actions run and can't be cancelled
          *     here.
@@ -931,7 +931,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/pull-requests/hide": {
+    "/api/v1/pull-requests/hide": {
         parameters: {
             query?: never;
             header?: never;
@@ -944,12 +944,12 @@ export interface paths {
          * Hide one pull request from the signed-in user's dashboard
          * @description Reversible, not destructive, like ignoring a repo: nothing is sent to
          *     the forge. A hidden pull request leaves `pullRequests` in
-         *     GET /api/dashboard and everything counted from it, and is counted in
+         *     GET /api/v1/dashboard and everything counted from it, and is counted in
          *     `hiddenPullRequests` instead. It stays listed for
          *     `includeHidden=true`, marked `hidden`, so a client can offer a Restore.
          *
          *     With `days`, the hide ends by itself that many days from now. Without
-         *     it the pull request stays hidden until `POST /api/pull-requests/unhide`.
+         *     it the pull request stays hidden until `POST /api/v1/pull-requests/unhide`.
          *     A repeat call replaces the earlier choice (hide until restored, then
          *     hide for 7 days, ends with the 7 days). The server forgets the record
          *     once the pull request is no longer open, so the list never grows
@@ -963,7 +963,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/pull-requests/auto-update": {
+    "/api/v1/pull-requests/auto-update": {
         parameters: {
             query?: never;
             header?: never;
@@ -976,13 +976,13 @@ export interface paths {
          * Turn the automatic branch update on or off for one pull request
          * @description A pure local write: nothing is sent to the forge. The choice is kept
          *     only while it differs from the repo's auto-update setting
-         *     (`/api/repos/auto-update-branch/enable`), so a choice that matches
+         *     (`/api/v1/repos/auto-update-branch/enable`), so a choice that matches
          *     the repo is dropped and the pull request follows the repo again, and
          *     a later change to the repo's setting reaches it. With `enabled`
          *     `null` or absent the pull request goes back to its repo's setting.
          *     Idempotent. A draft and a release-please pull request are never
          *     updated automatically, whatever is chosen: `autoUpdate.unavailable`
-         *     in GET /api/dashboard says so. The server forgets the choice once
+         *     in GET /api/v1/dashboard says so. The server forgets the choice once
          *     the pull request is no longer open, its repo is no longer tracked, or
          *     the repo's setting changes to match it. A pull request the dashboard
          *     doesn't hold is a 404.
@@ -994,7 +994,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/pull-requests/unhide": {
+    "/api/v1/pull-requests/unhide": {
         parameters: {
             query?: never;
             header?: never;
@@ -1005,7 +1005,7 @@ export interface paths {
         put?: never;
         /**
          * Bring a hidden pull request back onto the signed-in user's dashboard
-         * @description The reverse of POST /api/pull-requests/hide. Idempotent: restoring a
+         * @description The reverse of POST /api/v1/pull-requests/hide. Idempotent: restoring a
          *     pull request that isn't hidden is a 204 too.
          */
         post: operations["unhidePullRequest"];
@@ -1015,7 +1015,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/pull-requests/update-branch": {
+    "/api/v1/pull-requests/update-branch": {
         parameters: {
             query?: never;
             header?: never;
@@ -1047,7 +1047,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/pull-requests/dependabot-action": {
+    "/api/v1/pull-requests/dependabot-action": {
         parameters: {
             query?: never;
             header?: never;
@@ -1079,7 +1079,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/pull-requests/renovate-rebase": {
+    "/api/v1/pull-requests/renovate-rebase": {
         parameters: {
             query?: never;
             header?: never;
@@ -1117,7 +1117,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/pull-requests/renovate-rebase/cancel": {
+    "/api/v1/pull-requests/renovate-rebase/cancel": {
         parameters: {
             query?: never;
             header?: never;
@@ -1148,7 +1148,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/pull-requests/details": {
+    "/api/v1/pull-requests/details": {
         parameters: {
             query?: never;
             header?: never;
@@ -1161,7 +1161,7 @@ export interface paths {
          *     conversation in order, the thumbs up and thumbs down reactions on each
          *     with who gave them, and, for a release pull request, the release
          *     notes. Fetched live on every call, never as part of GET
-         *     /api/dashboard's snapshot: comments and reactions for every row would
+         *     /api/v1/dashboard's snapshot: comments and reactions for every row would
          *     spend the forge's budget on rows nobody opens.
          *
          *     GitHub answers with one GraphQL query. Forgejo costs one call for the
@@ -1181,7 +1181,7 @@ export interface paths {
          *     the browser loads it directly. A future policy's `img-src` has to
          *     allow avatars.githubusercontent.com, repository-images.githubusercontent.com
          *     (a GitHub repository's logo, see `logoUrl` on a repo in GET
-         *     /api/dashboard) and the Forgejo host.
+         *     /api/v1/dashboard) and the Forgejo host.
          *
          *     A forge that can't be read is an error, never an empty thread.
          */
@@ -1194,7 +1194,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/issues/details": {
+    "/api/v1/issues/details": {
         parameters: {
             query?: never;
             header?: never;
@@ -1205,9 +1205,9 @@ export interface paths {
          * Read an issue's description, comments and reactions, on demand
          * @description What the issue dialog shows: the description, the conversation in
          *     order, and the thumbs up and thumbs down reactions on each with who
-         *     gave them. The same shape and rules as GET /api/pull-requests/details
+         *     gave them. The same shape and rules as GET /api/v1/pull-requests/details
          *     without the release notes, which only a pull request has. Fetched live
-         *     on every call, never as part of GET /api/dashboard's snapshot.
+         *     on every call, never as part of GET /api/v1/dashboard's snapshot.
          *
          *     GitHub answers with one GraphQL query. Forgejo costs one call for the
          *     issue, one for its comments, one for the description's reactions and
@@ -1223,7 +1223,7 @@ export interface paths {
          *     number. An avatar is the forge's own URL, passed through unchanged and
          *     never proxied.
          *
-         *     The error answers are those of GET /api/pull-requests/details, with
+         *     The error answers are those of GET /api/v1/pull-requests/details, with
          *     the same codes. An issue that doesn't exist is a 404, and a forge that
          *     can't be read is an error, never an empty thread.
          */
@@ -1236,7 +1236,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/issues/close": {
+    "/api/v1/issues/close": {
         parameters: {
             query?: never;
             header?: never;
@@ -1248,7 +1248,7 @@ export interface paths {
         /**
          * Close one issue, on the signed-in user's behalf
          * @description Closes the named issue. The Issues page's dialog offers it, on its own
-         *     or after posting a comment with `POST /api/issues/comment`. Closing an
+         *     or after posting a comment with `POST /api/v1/issues/comment`. Closing an
          *     issue that is already closed is not refused: both forges treat it as
          *     done, so the call succeeds and there is no `already_closed` answer.
          *
@@ -1271,7 +1271,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/issues/reopen": {
+    "/api/v1/issues/reopen": {
         parameters: {
             query?: never;
             header?: never;
@@ -1301,7 +1301,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/issues/comment": {
+    "/api/v1/issues/comment": {
         parameters: {
             query?: never;
             header?: never;
@@ -1334,7 +1334,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/releases/details": {
+    "/api/v1/releases/details": {
         parameters: {
             query?: never;
             header?: never;
@@ -1346,7 +1346,7 @@ export interface paths {
          * @description What the release dialog on the Main branches page shows for a
          *     repository's latest published release: its title, when it was
          *     published, its notes and the thumbs reactions on them. Fetched live on
-         *     every call, never as part of GET /api/main-branches' snapshot, so a
+         *     every call, never as part of GET /api/v1/main-branches' snapshot, so a
          *     release nobody opens costs no budget.
          *
          *     GitHub answers with one GraphQL query. Only GitHub rows carry a latest
@@ -1358,7 +1358,7 @@ export interface paths {
          *     20,000 characters (`truncated`), and a reaction names at most its
          *     first 10 people while `count` is the full number.
          *
-         *     The error answers are those of GET /api/pull-requests/details, with
+         *     The error answers are those of GET /api/v1/pull-requests/details, with
          *     the same codes. A tag that has no published release is a 404, and so is a draft,
          *     a pre-release or a release with no publish date.
          */
@@ -1371,7 +1371,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/queued-actions": {
+    "/api/v1/queued-actions": {
         parameters: {
             query?: never;
             header?: never;
@@ -1384,7 +1384,7 @@ export interface paths {
          *     resets, oldest first: the ones still `queued`, and the
          *     final ones (`done`, `skipped`, `failed`) kept for 24 hours so a
          *     client can show the outcome in its Activity list. The same list
-         *     rides along on GET /api/dashboard as `queuedActions`.
+         *     rides along on GET /api/v1/dashboard as `queuedActions`.
          */
         get: operations["listQueuedActions"];
         put?: never;
@@ -1419,7 +1419,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/queued-actions/{id}": {
+    "/api/v1/queued-actions/{id}": {
         parameters: {
             query?: never;
             header?: never;
@@ -1530,7 +1530,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/dashboard": {
+    "/api/v1/dashboard": {
         parameters: {
             query?: never;
             header?: never;
@@ -1559,7 +1559,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/dashboard/stream": {
+    "/api/v1/dashboard/stream": {
         parameters: {
             query?: never;
             header?: never;
@@ -1574,7 +1574,7 @@ export interface paths {
          *     one, which is what turns that into a live update instead of
          *     something only the next scheduled refresh picks up.
          *
-         *     The frontend's own 30-second poll against GET /api/dashboard
+         *     The frontend's own 30-second poll against GET /api/v1/dashboard
          *     keeps running unconditionally, connected or not — a browser or
          *     proxy that can't hold an SSE connection open just never
          *     benefits from this, rather than the dashboard going stale
@@ -1586,7 +1586,7 @@ export interface paths {
          *
          *     A client that passes `sid` can also follow the job lists of the
          *     pull requests and default branches it has open, through
-         *     `POST /api/dashboard/stream/watch`. Each list arrives as named
+         *     `POST /api/v1/dashboard/stream/watch`. Each list arrives as named
          *     `run` events on this stream, one for each workflow run attempt, so a
          *     client that only listens for default messages never sees one. A
          *     reconnect reuses the same `sid` with nothing watched, so the client
@@ -1601,7 +1601,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/dashboard/stream/watch": {
+    "/api/v1/dashboard/stream/watch": {
         parameters: {
             query?: never;
             header?: never;
@@ -1635,7 +1635,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/presence": {
+    "/api/v1/presence": {
         parameters: {
             query?: never;
             header?: never;
@@ -1676,7 +1676,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/dashboard/refresh": {
+    "/api/v1/dashboard/refresh": {
         parameters: {
             query?: never;
             header?: never;
@@ -1714,7 +1714,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/main-branches": {
+    "/api/v1/main-branches": {
         parameters: {
             query?: never;
             header?: never;
@@ -1744,7 +1744,7 @@ export interface paths {
          *
          *     A forge that can't be reached keeps its last known rows, each marked
          *     `staleSince`, the same carry-over `forges[].staleSince`
-         *     on GET /api/dashboard reports. A forge whose rate-limit budget is
+         *     on GET /api/v1/dashboard reports. A forge whose rate-limit budget is
          *     spent is skipped until it resets and its rows are kept the same way.
          *     Only the signed-in user's own repositories.
          *
@@ -1761,7 +1761,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/checks/log": {
+    "/api/v1/checks/log": {
         parameters: {
             query?: never;
             header?: never;
@@ -1808,7 +1808,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/main-branches/advisories": {
+    "/api/v1/main-branches/advisories": {
         parameters: {
             query?: never;
             header?: never;
@@ -1821,7 +1821,7 @@ export interface paths {
          *     repository: each open Dependabot alert with the fields GitHub's own
          *     alert page shows. The list and the detail view are the same answer, so
          *     opening one advisory costs no second call. Fetched live on every call,
-         *     never as part of GET /api/main-branches' snapshot, so a repository
+         *     never as part of GET /api/v1/main-branches' snapshot, so a repository
          *     nobody opens costs no budget.
          *
          *     Sorted by severity, highest first, then newest first. GitHub reads them
@@ -1858,7 +1858,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/main-branches/rerun-checks": {
+    "/api/v1/main-branches/rerun-checks": {
         parameters: {
             query?: never;
             header?: never;
@@ -1869,7 +1869,7 @@ export interface paths {
         put?: never;
         /**
          * Rerun only the failed jobs of a repository's default-branch pipeline, on the signed-in user's behalf
-         * @description The branch twin of POST /api/pull-requests/rerun-checks. Asks the forge
+         * @description The branch twin of POST /api/v1/pull-requests/rerun-checks. Asks the forge
          *     to rerun the failed jobs of the Actions workflow runs on the commit
          *     the branch's job list shows, and nothing that passed. It
          *     answers once the forge has queued them, not when they finish, so a
@@ -1892,7 +1892,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/stats/forge-api": {
+    "/api/v1/stats/forge-api": {
         parameters: {
             query?: never;
             header?: never;
@@ -1931,7 +1931,7 @@ export interface paths {
          *     the caller has saved, and a GitHub App installation id is a number the
          *     caller types in, so until the dashboard has one user, someone who saves
          *     another account's installation id sees that installation's counts. `budgets` are the rate limits each forge last
-         *     reported, the same figures as `forges` on GET /api/dashboard.
+         *     reported, the same figures as `forges` on GET /api/v1/dashboard.
          */
         get: operations["getForgeApiStats"];
         put?: never;
@@ -2014,6 +2014,12 @@ export interface components {
             threads?: number;
         };
         Version: {
+            /**
+             * @description The API's current major version, such as v1: the path segment
+             *     the versioned operations live under. It is one value, not a list.
+             * @example v1
+             */
+            apiVersion: string;
             /**
              * @description The release tag this binary was built from, with no leading
              *     "v" — or "dev" for a build outside the release pipeline.
@@ -2232,21 +2238,21 @@ export interface components {
              *     means "system" — follow the browser's prefers-color-scheme
              *     rather than a saved choice. Set only from Settings; every
              *     other page reads it via the lightweight
-             *     GET /api/settings/theme instead of this endpoint.
+             *     GET /api/v1/settings/theme instead of this endpoint.
              * @enum {string}
              */
             theme: "" | "light" | "dark";
             /**
              * @description The signed-in user's own time zone as an IANA name such as
              *     `Europe/Amsterdam`. Empty means the browser's own zone. Set only
-             *     from Settings (PUT /api/settings/timezone); every other page reads
-             *     it via GET /api/settings/timezone.
+             *     from Settings (PUT /api/v1/settings/timezone); every other page reads
+             *     it via GET /api/v1/settings/timezone.
              */
             timezone?: string;
             /**
              * @description Whether the user hides the bot-kept "Dependency Dashboard" issue
              *     everywhere: the server leaves a `housekeeping` issue out of the
-             *     `issues` of GET /api/dashboard and its stream, and out of every
+             *     `issues` of GET /api/v1/dashboard and its stream, and out of every
              *     count and total built from them (`navCounts`, Insights). Always
              *     present once the server applies it.
              */
@@ -2276,7 +2282,7 @@ export interface components {
             ignoredTitleCounts: (number | null)[];
         };
         /**
-         * @description The signed-in user's settings as `GET /api/settings/summary` and the
+         * @description The signed-in user's settings as `GET /api/v1/settings/summary` and the
          *     `get_settings` MCP tool return them: every field of
          *     SettingsResponse except `webhookToken` and `webhookSecret`, which are
          *     never part of it, plus `webhookConfigured`. No forge token appears,
@@ -2295,7 +2301,7 @@ export interface components {
             /**
              * @description Whether this user's webhook token and secret exist. They are
              *     created the first time the Settings page reads
-             *     `GET /api/settings`, never by this read, so this is false for a
+             *     `GET /api/v1/settings`, never by this read, so this is false for a
              *     user who has not opened Settings yet.
              */
             webhookConfigured: boolean;
@@ -2318,7 +2324,7 @@ export interface components {
          *     0 or omitted really does disconnect the App. Rejected (400) if
          *     the server has no GitHub App configured (see
          *     SettingsResponse.githubAppConfigured). Theme isn't settable
-         *     here at all — see PUT /api/settings/theme.
+         *     here at all — see PUT /api/v1/settings/theme.
          */
         SettingsRequest: {
             githubToken?: string;
@@ -2368,17 +2374,17 @@ export interface components {
              */
             ignoredTitles?: string[];
         };
-        /** @description See GET /api/settings/theme's own description. */
+        /** @description See GET /api/v1/settings/theme's own description. */
         ThemeResponse: {
             /** @enum {string} */
             theme: "" | "light" | "dark";
         };
-        /** @description See PUT /api/settings/theme's own description. */
+        /** @description See PUT /api/v1/settings/theme's own description. */
         ThemeRequest: {
             /** @enum {string} */
             theme: "" | "light" | "dark";
         };
-        /** @description See GET /api/settings/timezone's own description. */
+        /** @description See GET /api/v1/settings/timezone's own description. */
         TimezoneResponse: {
             /**
              * @description An IANA zone name such as `Europe/Amsterdam`, or empty for the browser's own.
@@ -2386,7 +2392,7 @@ export interface components {
              */
             timezone: string;
         };
-        /** @description See PUT /api/settings/timezone's own description. */
+        /** @description See PUT /api/v1/settings/timezone's own description. */
         TimezoneRequest: {
             /** @description An IANA zone name, or empty for the browser's own. `Local` is refused. */
             timezone: string;
@@ -2400,7 +2406,7 @@ export interface components {
         Credential: {
             /** @description This passkey's own credential ID (base64url), distinct from the account's user ID. */
             id: string;
-            /** @description The passkey's name, given at registration and changeable with `PATCH /api/auth/credentials/{id}`. Empty when it was never named; clients then fall back to `createdAt`. */
+            /** @description The passkey's name, given at registration and changeable with `PATCH /api/v1/auth/credentials/{id}`. Empty when it was never named; clients then fall back to `createdAt`. */
             label: string;
             /** Format: date-time */
             createdAt: string;
@@ -2465,18 +2471,18 @@ export interface components {
         /** @description Which repo to create or fix up a webhook on. */
         WebhookEnsureRequest: {
             forge: components["schemas"]["Forge"];
-            /** @description "owner/repo", matching a Repo.fullName from GET /api/dashboard. */
+            /** @description "owner/repo", matching a Repo.fullName from GET /api/v1/dashboard. */
             fullName: string;
         };
         /**
          * @description Which repo to ignore, and in which scope(s). At least one
          *     of prs/issues must be true — a request with both false is
          *     rejected with 400 rather than silently doing nothing; use POST
-         *     /api/repos/unignore to clear both at once instead.
+         *     /api/v1/repos/unignore to clear both at once instead.
          */
         RepoIgnoreRequest: {
             forge: components["schemas"]["Forge"];
-            /** @description "owner/repo", matching a Repo.fullName from GET /api/dashboard. */
+            /** @description "owner/repo", matching a Repo.fullName from GET /api/v1/dashboard. */
             fullName: string;
             /** @description Whether to ignore this repo's pull requests. */
             prs: boolean;
@@ -2527,9 +2533,9 @@ export interface components {
         /** @description Which pull request to act on. */
         PullRequestActionRequest: {
             forge: components["schemas"]["Forge"];
-            /** @description "owner/repo", matching a Repo.fullName from GET /api/dashboard. */
+            /** @description "owner/repo", matching a Repo.fullName from GET /api/v1/dashboard. */
             fullName: string;
-            /** @description Matching a PullRequest.number from GET /api/dashboard. */
+            /** @description Matching a PullRequest.number from GET /api/v1/dashboard. */
             number: number;
         };
         /** @description Which pull request to merge, and whether to delete its source branch afterwards. */
@@ -2572,17 +2578,17 @@ export interface components {
         /** @description Which issue to act on. */
         IssueActionRequest: {
             forge: components["schemas"]["Forge"];
-            /** @description "owner/repo", matching an Issue.repo from GET /api/dashboard. */
+            /** @description "owner/repo", matching an Issue.repo from GET /api/v1/dashboard. */
             fullName: string;
-            /** @description Matching an Issue.number from GET /api/dashboard. */
+            /** @description Matching an Issue.number from GET /api/v1/dashboard. */
             number: number;
         };
         /** @description Which issue to comment on, and what to say. */
         IssueCommentRequest: {
             forge: components["schemas"]["Forge"];
-            /** @description "owner/repo", matching an Issue.repo from GET /api/dashboard. */
+            /** @description "owner/repo", matching an Issue.repo from GET /api/v1/dashboard. */
             fullName: string;
-            /** @description Matching an Issue.number from GET /api/dashboard. */
+            /** @description Matching an Issue.number from GET /api/v1/dashboard. */
             number: number;
             /** @description The comment, as Markdown. Blank text is refused. */
             body: string;
@@ -2590,7 +2596,7 @@ export interface components {
         /** @description Which repository's default branch to rerun the failed checks of. */
         MainBranchRerunRequest: {
             forge: components["schemas"]["Forge"];
-            /** @description "owner/repo", matching a MainBranch.fullName from GET /api/main-branches. */
+            /** @description "owner/repo", matching a MainBranch.fullName from GET /api/v1/main-branches. */
             fullName: string;
         };
         /**
@@ -2599,9 +2605,9 @@ export interface components {
          */
         PullRequestHideRequest: {
             forge: components["schemas"]["Forge"];
-            /** @description "owner/repo", matching a Repo.fullName from GET /api/dashboard. */
+            /** @description "owner/repo", matching a Repo.fullName from GET /api/v1/dashboard. */
             fullName: string;
-            /** @description Matching a PullRequest.number from GET /api/dashboard. */
+            /** @description Matching a PullRequest.number from GET /api/v1/dashboard. */
             number: number;
             /** @description Hide for this many days, then show it again on its own. */
             days?: number;
@@ -2609,9 +2615,9 @@ export interface components {
         /** @description Which pull request to act on, and which of Dependabot's own comment commands to send. */
         PullRequestDependabotActionRequest: {
             forge: components["schemas"]["Forge"];
-            /** @description "owner/repo", matching a Repo.fullName from GET /api/dashboard. */
+            /** @description "owner/repo", matching a Repo.fullName from GET /api/v1/dashboard. */
             fullName: string;
-            /** @description Matching a PullRequest.number from GET /api/dashboard. */
+            /** @description Matching a PullRequest.number from GET /api/v1/dashboard. */
             number: number;
             /**
              * @description Which Dependabot comment command to post — "@dependabot rebase" or "@dependabot recreate".
@@ -2742,14 +2748,14 @@ export interface components {
             /** @description That job's own page on the forge that ran it — never the pull request's own page. */
             url: string;
             /**
-             * @description The Actions job (or check run) id to pass to GET /api/checks/log.
+             * @description The Actions job (or check run) id to pass to GET /api/v1/checks/log.
              *     Absent for a legacy commit status and for a workflow held for
              *     approval, which have no output to read.
              */
             jobId?: number;
             /**
              * @description The Actions workflow run this job belongs to, to pass to
-             *     `POST /api/checks/cancel-run`. Present on every Actions job,
+             *     `POST /api/v1/checks/cancel-run`. Present on every Actions job,
              *     finished or not; only a job that is queued or running has
              *     anything left to cancel, which a client reads from `status`. A
              *     third-party check and a legacy commit status have none.
@@ -2818,8 +2824,8 @@ export interface components {
              *     the first five failed jobs of a list, in the list's order.
              *     Forgejo never fills it in a list, since that would read a log
              *     while the list is built: ask for it through
-             *     GET /api/checks/log with `excerpt=true`. The whole output is read
-             *     through GET /api/checks/log.
+             *     GET /api/v1/checks/log with `excerpt=true`. The whole output is read
+             *     through GET /api/v1/checks/log.
              */
             excerpt?: string;
         };
@@ -3550,7 +3556,7 @@ export interface components {
         /**
          * @description Whether the dashboard brings this pull request's branch up to date by
          *     itself: the pull request's own choice when it has one
-         *     (`POST /api/pull-requests/auto-update`), else its repo's
+         *     (`POST /api/v1/pull-requests/auto-update`), else its repo's
          *     auto-update setting. Always present.
          */
         AutoUpdate: {
@@ -3584,9 +3590,9 @@ export interface components {
          */
         PullRequestAutoUpdateRequest: {
             forge: components["schemas"]["Forge"];
-            /** @description "owner/repo", matching a Repo.fullName from GET /api/dashboard. */
+            /** @description "owner/repo", matching a Repo.fullName from GET /api/v1/dashboard. */
             fullName: string;
-            /** @description Matching a PullRequest.number from GET /api/dashboard. */
+            /** @description Matching a PullRequest.number from GET /api/v1/dashboard. */
             number: number;
             /**
              * @description `true` to update this pull request automatically, `false` to
@@ -3604,9 +3610,9 @@ export interface components {
              */
             action: "update_branch" | "dependabot_rebase" | "renovate_rebase";
             forge: components["schemas"]["Forge"];
-            /** @description "owner/repo", matching a Repo.fullName from GET /api/dashboard. */
+            /** @description "owner/repo", matching a Repo.fullName from GET /api/v1/dashboard. */
             fullName: string;
-            /** @description Matching a PullRequest.number from GET /api/dashboard. */
+            /** @description Matching a PullRequest.number from GET /api/v1/dashboard. */
             number: number;
         };
         /**
@@ -3615,7 +3621,7 @@ export interface components {
          *     with Cancel, and a final one in its Activity list.
          */
         QueuedAction: {
-            /** @description Opaque. What DELETE /api/queued-actions/{id} takes. */
+            /** @description Opaque. What DELETE /api/v1/queued-actions/{id} takes. */
             id: string;
             /** @enum {string} */
             action: "update_branch" | "dependabot_rebase" | "renovate_rebase";
@@ -3973,7 +3979,7 @@ export interface components {
         Dashboard: {
             /**
              * @description The signed-in user's queued actions, waiting and finished in the
-             *     last 24 hours (GET /api/queued-actions), so a client lists them in
+             *     last 24 hours (GET /api/v1/queued-actions), so a client lists them in
              *     its Activity panel and learns an outcome from the stream it
              *     already reads. Always present, empty when there are none.
              */
@@ -4010,14 +4016,14 @@ export interface components {
              *     last run: those rows are on the page, and their forge reports
              *     `reachable: false` with `staleSince` until the first refresh
              *     succeeds. The same
-             *     on `GET /api/dashboard`, the stream and the MCP `get_dashboard`
+             *     on `GET /api/v1/dashboard`, the stream and the MCP `get_dashboard`
              *     output. Always present. A client of an older server that
              *     lacks it should treat a missing flag as true (loaded).
              */
             firstRefreshDone: boolean;
             navCounts: components["schemas"]["NavCounts"];
             /**
-             * @description What `GET /api/main-branches` answers, from the same snapshot and
+             * @description What `GET /api/v1/main-branches` answers, from the same snapshot and
              *     with the same ignore list, so the Main branches page redraws from
              *     the message every other page reads. It reads the endpoint itself only
              *     while the stream is down or just back.
@@ -4031,7 +4037,7 @@ export interface components {
             generatedAt: string;
             /**
              * @description How often, in seconds, a client should re-read GET
-             *     /api/dashboard. The server's advice, so a client needs no
+             *     /api/v1/dashboard. The server's advice, so a client needs no
              *     interval of its own. The read is cheap and never calls a
              *     forge; this is not the backend's refresh schedule. It is
              *     shorter (2) until the viewer's first refresh has finished, so a
@@ -4098,7 +4104,7 @@ export interface components {
         /** @description One tracked repository and the CI status of its default branch. */
         MainBranch: {
             forge: components["schemas"]["Forge"];
-            /** @description "owner/repo", matching a Repo.fullName from GET /api/dashboard. */
+            /** @description "owner/repo", matching a Repo.fullName from GET /api/v1/dashboard. */
             fullName: string;
             /** @description The repository's own page on its forge. */
             url: string;
@@ -4134,7 +4140,7 @@ export interface components {
              * @description What each workflow run attempt on the newest commit did, the
              *     facts `status`, `failingJobs` and `checks` were worked out from,
              *     in the order the forge listed them. A client can fold them into
-             *     its own pill. They are the jobs `GET /api/main-branches/checks`
+             *     its own pill. They are the jobs `GET /api/v1/main-branches/checks`
              *     lists, grouped as the stream's `run` events group them. Present
              *     for a repository with at least one check. On GitHub they are the
              *     first 50 checks of the newest commit, grouped by the workflow run
@@ -4486,9 +4492,9 @@ export interface components {
     responses: {
         /**
          * @description This address made too many sign-in or registration requests. The
-         *     four ceremony endpoints (`/api/auth/register/begin`,
-         *     `/api/auth/register/finish`, `/api/auth/login/begin` and
-         *     `/api/auth/login/finish`) share one allowance per client address: a
+         *     four ceremony endpoints (`/api/v1/auth/register/begin`,
+         *     `/api/v1/auth/register/finish`, `/api/v1/auth/login/begin` and
+         *     `/api/v1/auth/login/finish`) share one allowance per client address: a
          *     burst of 10 requests, then one more every 6 seconds. A person signing
          *     in uses two requests, so they never reach it. Wait `Retry-After`
          *     seconds and try again. The client address is the connection's own, or
@@ -4517,7 +4523,7 @@ export interface components {
         PathWebhookToken: string;
         PathTokenID: string;
         /**
-         * @description Whether pull requests the user hid (`POST /api/pull-requests/hide`)
+         * @description Whether pull requests the user hid (`POST /api/v1/pull-requests/hide`)
          *     are in `pullRequests`, marked `hidden: true`. Defaults to `false`: a
          *     hidden pull request is left out and counted in the response's
          *     `hiddenPullRequests`. A client lists the hidden ones, to offer a
@@ -6765,7 +6771,7 @@ export interface operations {
              *     already ticked: the rebase is queued, and nothing was changed.
              *     A client that follows `allowedActions` never meets it, since a
              *     rebase that is already requested is not offered; it can be
-             *     withdrawn with `POST /api/pull-requests/renovate-rebase/cancel`.
+             *     withdrawn with `POST /api/v1/pull-requests/renovate-rebase/cancel`.
              */
             409: {
                 headers: {
@@ -6893,9 +6899,9 @@ export interface operations {
         parameters: {
             query: {
                 forge: components["schemas"]["Forge"];
-                /** @description "owner/repo", matching a Repo.fullName from GET /api/dashboard. */
+                /** @description "owner/repo", matching a Repo.fullName from GET /api/v1/dashboard. */
                 fullName: string;
-                /** @description Matching a PullRequest.number from GET /api/dashboard. */
+                /** @description Matching a PullRequest.number from GET /api/v1/dashboard. */
                 number: number;
             };
             header?: never;
@@ -6973,9 +6979,9 @@ export interface operations {
         parameters: {
             query: {
                 forge: components["schemas"]["Forge"];
-                /** @description "owner/repo", matching an Issue.repo from GET /api/dashboard. */
+                /** @description "owner/repo", matching an Issue.repo from GET /api/v1/dashboard. */
                 fullName: string;
-                /** @description Matching an Issue.number from GET /api/dashboard. */
+                /** @description Matching an Issue.number from GET /api/v1/dashboard. */
                 number: number;
             };
             header?: never;
@@ -7281,9 +7287,9 @@ export interface operations {
         parameters: {
             query: {
                 forge: components["schemas"]["Forge"];
-                /** @description "owner/repo", matching a MainBranch.fullName from GET /api/main-branches. */
+                /** @description "owner/repo", matching a MainBranch.fullName from GET /api/v1/main-branches. */
                 fullName: string;
-                /** @description Matching a MainBranchRelease.tag from GET /api/main-branches. */
+                /** @description Matching a MainBranchRelease.tag from GET /api/v1/main-branches. */
                 tag: string;
             };
             header?: never;
@@ -7596,7 +7602,8 @@ export interface operations {
                 content: {
                     /**
                      * @example {
-                     *       "version": "0.12.1"
+                     *       "version": "0.12.1",
+                     *       "apiVersion": "v1"
                      *     }
                      */
                     "application/json": components["schemas"]["Version"];
@@ -7616,7 +7623,7 @@ export interface operations {
                  */
                 includeDrafts?: components["parameters"]["QueryIncludeDrafts"];
                 /**
-                 * @description Whether pull requests the user hid (`POST /api/pull-requests/hide`)
+                 * @description Whether pull requests the user hid (`POST /api/v1/pull-requests/hide`)
                  *     are in `pullRequests`, marked `hidden: true`. Defaults to `false`: a
                  *     hidden pull request is left out and counted in the response's
                  *     `hiddenPullRequests`. A client lists the hidden ones, to offer a
@@ -7671,7 +7678,7 @@ export interface operations {
                  */
                 includeDrafts?: components["parameters"]["QueryIncludeDrafts"];
                 /**
-                 * @description Whether pull requests the user hid (`POST /api/pull-requests/hide`)
+                 * @description Whether pull requests the user hid (`POST /api/v1/pull-requests/hide`)
                  *     are in `pullRequests`, marked `hidden: true`. Defaults to `false`: a
                  *     hidden pull request is left out and counted in the response's
                  *     `hiddenPullRequests`. A client lists the hidden ones, to offer a
@@ -7694,7 +7701,7 @@ export interface operations {
         responses: {
             /**
              * @description An SSE stream. Each event's `data` field is a JSON-encoded
-             *     snapshot, identical in shape to GET /api/dashboard's
+             *     snapshot, identical in shape to GET /api/v1/dashboard's
              *     response body. A named `run` event carries a `RunEvent`
              *     instead.
              */
@@ -7841,7 +7848,7 @@ export interface operations {
                  */
                 includeDrafts?: components["parameters"]["QueryIncludeDrafts"];
                 /**
-                 * @description Whether pull requests the user hid (`POST /api/pull-requests/hide`)
+                 * @description Whether pull requests the user hid (`POST /api/v1/pull-requests/hide`)
                  *     are in `pullRequests`, marked `hidden: true`. Defaults to `false`: a
                  *     hidden pull request is left out and counted in the response's
                  *     `hiddenPullRequests`. A client lists the hidden ones, to offer a
@@ -8024,7 +8031,7 @@ export interface operations {
         parameters: {
             query: {
                 forge: components["schemas"]["Forge"];
-                /** @description "owner/repo", matching a MainBranch.fullName from GET /api/main-branches. */
+                /** @description "owner/repo", matching a MainBranch.fullName from GET /api/v1/main-branches. */
                 fullName: string;
             };
             header?: never;
