@@ -1,5 +1,12 @@
 # Changelog
 
+## [23.1.1](https://github.com/alrayyes/forge-dashboard-sdk-node/compare/v23.1.0...v23.1.1) (2026-10-31)
+
+
+### Bug Fixes
+
+* **ci:** keep Dependabot PRs green ([#387](https://github.com/alrayyes/forge-dashboard-sdk-node/issues/387)) ([b5bc08f](https://github.com/alrayyes/forge-dashboard-sdk-node/commit/b5bc08f88ab1114ac2627801df55106d729d5f18))
+
 ## [23.1.0](https://github.com/alrayyes/forge-dashboard-sdk-node/compare/v23.0.0...v23.1.0) (2026-10-30)
 
 
