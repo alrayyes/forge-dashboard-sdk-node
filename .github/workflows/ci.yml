@@ -68,9 +68,11 @@ jobs:
   # every future merge, release-please's own PR included.
   # `fail_ci_if_error: true` still surfaces a real upload problem loudly;
   # it just doesn't gate anything.
+  # Dependabot runs can't read repo secrets, so the token is empty and the
+  # upload always fails there; skip it for them.
   coverage:
     needs: test
-    if: ${{ !cancelled() }}
+    if: ${{ !cancelled() && github.actor != 'dependabot[bot]' }}
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
