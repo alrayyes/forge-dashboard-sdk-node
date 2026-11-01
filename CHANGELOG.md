@@ -1,5 +1,17 @@
 # Changelog
 
+## [23.2.0](https://github.com/alrayyes/forge-dashboard-sdk-node/compare/v23.1.1...v23.2.0) (2026-11-01)
+
+
+### Features
+
+* **spec:** regenerate types from forge-dashboard openapi.yaml ([#389](https://github.com/alrayyes/forge-dashboard-sdk-node/issues/389)) ([979fb5b](https://github.com/alrayyes/forge-dashboard-sdk-node/commit/979fb5b6b91482365fd6ebde22003d499b7c5f5c))
+
+
+### Bug Fixes
+
+* bump the npm-minor-patch group across 1 directory with 6 updates ([#384](https://github.com/alrayyes/forge-dashboard-sdk-node/issues/384)) ([c37e345](https://github.com/alrayyes/forge-dashboard-sdk-node/commit/c37e345f44da5121b052f5aa707f5c744d2e31d3))
+
 ## [23.1.1](https://github.com/alrayyes/forge-dashboard-sdk-node/compare/v23.1.0...v23.1.1) (2026-10-31)
 
 
