@@ -393,8 +393,9 @@ export interface paths {
          *     sees. Each save is logged with the user agent.
          *
          *     A save whose top-level `rev` is lower than the saved copy's is
-         *     ignored and still answers 204. A page that is closing sends its last
-         *     save beside one already in flight, so the older one can arrive
+         *     ignored and answers 200 with the saved copy's `rev`, so the page can
+         *     catch up and send the save again. A page that is closing sends its
+         *     last save beside one already in flight, so the older one can arrive
          *     last, and it must not replace the newer copy. A body with no `rev`,
          *     or a saved copy with none, is always stored.
          */
@@ -5296,7 +5297,19 @@ export interface operations {
             };
         };
         responses: {
-            /** @description Saved, or ignored because the saved copy has a higher `rev`. */
+            /** @description Ignored, because the saved copy has a higher `rev`. The body carries that `rev`. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @description The saved copy's revision. */
+                        rev: number;
+                    };
+                };
+            };
+            /** @description Saved. */
             204: {
                 headers: {
                     [name: string]: unknown;
