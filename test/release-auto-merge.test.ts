@@ -207,7 +207,7 @@ describe("release-auto-merge step", () => {
     for (const out of [TRANSIENT, BAD_GATEWAY]) {
       const result = await run(
         { auto: { out, rc: 1 }, direct: ok },
-        { FAKE_AUTO_FAILS: "2", RETRY_DELAY: "0" },
+        { FAKE_AUTO_FAILS: "2" },
       );
 
       expect(result.code).toBe(0);
@@ -216,13 +216,10 @@ describe("release-auto-merge step", () => {
   });
 
   test("gives up, visibly, when a transient error never clears", async () => {
-    const result = await run(
-      { auto: { out: BAD_GATEWAY, rc: 1 }, direct: ok },
-      { RETRY_DELAY: "0" },
-    );
+    const result = await run({ auto: { out: BAD_GATEWAY, rc: 1 }, direct: ok });
 
     expect(result.code).not.toBe(0);
-    expect(result.calls.length).toBeGreaterThan(1);
+    expect(result.calls).toHaveLength(4);
     expect(result.stdout + result.stderr).toContain("502 Bad Gateway");
   });
 
