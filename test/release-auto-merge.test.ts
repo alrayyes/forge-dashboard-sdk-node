@@ -36,6 +36,12 @@ const CONFLICT =
 const REQUIRED_PENDING =
   "X Pull request alrayyes/forge-dashboard-sdk-node#180 is not mergeable: 5 of 5 required status checks are expected.";
 
+const TRANSIENT =
+  "GraphQL: Something went wrong while executing your query on 2026-11-04T09:39:10Z. Please include `DBC0:2C75BD:769F24:AA8F60:6AEAFD34` when reporting this issue.";
+const BAD_GATEWAY =
+  'non-200 OK status code: 502 Bad Gateway body: "<html><title>502 Bad Gateway</title></html>"';
+const IN_PROGRESS = "GraphQL: Merge already in progress (mergePullRequest)";
+
 /** The `run` script of the step that calls `gh pr merge`. */
 function mergeStepScript(): string {
   const workflow = Bun.YAML.parse(readFileSync(WORKFLOW, "utf8")) as {
@@ -68,6 +74,10 @@ beforeEach(() => {
     'echo "$*" >> "$FAKE_LOG"',
     'for arg in "$@"; do',
     '  if [ "$arg" = "--auto" ]; then',
+    '    n=$(grep -c -- "--auto" "$FAKE_LOG")',
+    '    if [ "$n" -gt "$FAKE_AUTO_FAILS" ]; then',
+    "      exit 0",
+    "    fi",
     '    printf "%s\\n" "$FAKE_AUTO_OUT"',
     '    exit "$FAKE_AUTO_RC"',
     "  fi",
@@ -92,6 +102,8 @@ async function run(fake: Fake, env: Record<string, string> = {}) {
       PR_URL: "https://github.com/alrayyes/forge-dashboard-sdk-node/pull/180",
       GH_TOKEN: "secret-release-token",
       FAKE_LOG: log,
+      FAKE_AUTO_FAILS: "999",
+      RETRY_DELAY: "0",
       FAKE_AUTO_OUT: fake.auto.out,
       FAKE_AUTO_RC: String(fake.auto.rc),
       FAKE_DIRECT_OUT: fake.direct.out,
@@ -188,6 +200,37 @@ describe("release-auto-merge step", () => {
     expect(result.code).not.toBe(0);
     expect(result.calls).toHaveLength(2);
     expect(result.stdout + result.stderr).toContain("required status checks");
+  });
+
+  test("retries a transient GitHub error, then arms auto-merge", async () => {
+    // Two failures, then success: the job must not give up on the first.
+    for (const out of [TRANSIENT, BAD_GATEWAY]) {
+      const result = await run(
+        { auto: { out, rc: 1 }, direct: ok },
+        { FAKE_AUTO_FAILS: "2", RETRY_DELAY: "0" },
+      );
+
+      expect(result.code).toBe(0);
+      expect(result.calls).toHaveLength(3);
+    }
+  });
+
+  test("gives up, visibly, when a transient error never clears", async () => {
+    const result = await run(
+      { auto: { out: BAD_GATEWAY, rc: 1 }, direct: ok },
+      { RETRY_DELAY: "0" },
+    );
+
+    expect(result.code).not.toBe(0);
+    expect(result.calls.length).toBeGreaterThan(1);
+    expect(result.stdout + result.stderr).toContain("502 Bad Gateway");
+  });
+
+  test("succeeds when a merge is already in progress", async () => {
+    const result = await run({ auto: { out: IN_PROGRESS, rc: 1 }, direct: ok });
+
+    expect(result.code).toBe(0);
+    expect(result.calls).toHaveLength(1);
   });
 
   test("does not print the token", async () => {
