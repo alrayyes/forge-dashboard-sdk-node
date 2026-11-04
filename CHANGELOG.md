@@ -1,5 +1,12 @@
 # Changelog
 
+## [23.5.1](https://github.com/alrayyes/forge-dashboard-sdk-node/compare/v23.5.0...v23.5.1) (2026-11-04)
+
+
+### Bug Fixes
+
+* **ci:** retry transient GitHub errors in the release auto-merge job ([#398](https://github.com/alrayyes/forge-dashboard-sdk-node/issues/398)) ([94c921c](https://github.com/alrayyes/forge-dashboard-sdk-node/commit/94c921cc5e57263bc5493d6ca18ef6becbbcc31e))
+
 ## [23.5.0](https://github.com/alrayyes/forge-dashboard-sdk-node/compare/v23.4.0...v23.5.0) (2026-11-04)
 
 
