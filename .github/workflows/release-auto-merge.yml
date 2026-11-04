@@ -31,6 +31,11 @@ jobs:
       # stops the job with GitHub's own message, and GitHub refuses the
       # direct merge too if a required check is not done.
       #
+      # GitHub's API sometimes answers with a transient error (a GraphQL
+      # "Something went wrong", a 502/503/504); those are retried a few times
+      # with a pause. "Merge already in progress" means an earlier attempt got
+      # through, so it counts as success.
+      #
       # Two things this relies on. The case patterns below match GitHub's
       # free-form refusal wording ("is in unstable status"), so if GitHub
       # rewords it the job fails loudly rather than merging; the tests pin the
@@ -41,19 +46,30 @@ jobs:
       - name: Merge the release PR
         run: |
           set -euo pipefail
-          if out=$(gh pr merge --auto --squash "$PR_URL" 2>&1); then
-            echo "$out"
-            exit 0
-          fi
-          echo "$out" >&2
-          case "$out" in
-            *"is in unstable status"* | *"is in clean status"*)
-              gh pr merge --squash "$PR_URL"
-              ;;
-            *)
-              exit 1
-              ;;
-          esac
+          delay="${RETRY_DELAY:-20}"
+          for attempt in 1 2 3 4; do
+            if out=$(gh pr merge --auto --squash "$PR_URL" 2>&1); then
+              echo "$out"
+              exit 0
+            fi
+            echo "$out" >&2
+            case "$out" in
+              *"is in unstable status"* | *"is in clean status"*)
+                gh pr merge --squash "$PR_URL"
+                exit 0
+                ;;
+              *"Merge already in progress"*)
+                exit 0
+                ;;
+              *"Something went wrong while executing your query"* | *"502 Bad Gateway"* | *"503 Service Unavailable"* | *"504 Gateway Time-out"*)
+                [ "$attempt" -lt 4 ] && sleep "$delay"
+                ;;
+              *)
+                exit 1
+                ;;
+            esac
+          done
+          exit 1
         env:
           PR_URL: ${{ github.event.pull_request.html_url }}
           GH_TOKEN: ${{ secrets.RELEASE_TOKEN }}
