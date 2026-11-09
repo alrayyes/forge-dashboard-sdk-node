@@ -3939,8 +3939,9 @@ export interface components {
         /**
          * @description A pull request page's numbers. `running`, `failed` and
          *     `passed` count the pull requests whose CI is pending, failing and
-         *     succeeded. A pull request with no checks counts in `total` only, so
-         *     the four numbers need not add up. All four are always present.
+         *     succeeded, and `noChecks` those with no checks at all. One held for
+         *     workflow approval is in `total` only, so the numbers need not add up.
+         *     All five are always present.
          */
         NavPullRequestCount: {
             /** @description How many pull requests the page lists. */
@@ -3957,6 +3958,12 @@ export interface components {
             failed: number;
             /** @description How many of them have CI that succeeded. */
             passed: number;
+            /**
+             * @description How many of them have no checks (CI `none`). Not counted as
+             *     running: nothing is pending, so there is nothing to wait for
+             *     that the pull request itself can show.
+             */
+            noChecks: number;
         };
         NavIssueCount: {
             /**
