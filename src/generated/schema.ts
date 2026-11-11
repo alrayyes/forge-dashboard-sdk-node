@@ -1155,6 +1155,42 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/pull-requests/rerunnable": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Say whether Rerun failed checks would find a job on one pull request, without rerunning anything
+         * @description Reads what POST /api/v1/pull-requests/rerun-checks reads and restarts
+         *     nothing: on GitHub the failed check runs on the head commit, each mapped
+         *     to its workflow run; on Forgejo the failed Actions runs on the head
+         *     commit, after the same version check. The bulk "Rerun failed checks"
+         *     control asks it for each failing row, to sort them before it sends a
+         *     request.
+         *
+         *     "No" is an answer, not an error: `rerunnable` is false and `reason`
+         *     carries the same sentence the rerun's 409 would (only non-Actions checks
+         *     failed, nothing ran, a Forgejo older than 17). A forge that can't be read
+         *     keeps its own status. The forge can still refuse the rerun itself (the
+         *     run is too old, the token can't write to Actions), which only the rerun
+         *     learns.
+         *
+         *     This costs forge requests on every call (the pull request, its check
+         *     runs and one job lookup per failed check on GitHub), so it is never part
+         *     of the snapshot.
+         */
+        get: operations["getPullRequestRerunnable"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/pull-requests/details": {
         parameters: {
             query?: never;
@@ -3192,14 +3228,16 @@ export interface components {
         /**
          * @description Why a forge is unreachable, or why a write to it was rejected, as
          *     coarse as every forge this service talks to can agree on.
-         *     "unauthorized" covers both a bad token and a forbidden request;
-         *     "not_found" usually means a wrong instance URL. "conflict" is only
-         *     ever returned from a pull-request write — the forge reports the PR
-         *     itself isn't currently mergeable. "unknown" covers a signal this
+         *     "unreachable" is a request that got no response; "upstream_error" is
+         *     the forge answering with a 5xx (a gateway timeout, say), and the
+         *     status is in ForgeHealth.upstreamStatus. "unauthorized" covers both a
+         *     bad token and a forbidden request; "not_found" usually means a wrong
+         *     instance URL. "conflict" is only ever returned from a pull-request
+         *     write — the forge reports the PR itself isn't currently mergeable. "unknown" covers a signal this
          *     service doesn't recognize, rather than a guessed-at specific cause.
          * @enum {string}
          */
-        ForgeErrorKind: "unreachable" | "unauthorized" | "not_found" | "rate_limited" | "conflict" | "unknown";
+        ForgeErrorKind: "unreachable" | "upstream_error" | "unauthorized" | "not_found" | "rate_limited" | "conflict" | "unknown";
         ForgeHealth: {
             forge: components["schemas"]["Forge"];
             /** @description Whether the last refresh attempt against this forge succeeded. */
@@ -3233,6 +3271,8 @@ export interface components {
             /** @description A human-readable explanation of the last failure, if reachable is false. Mapped from errorKind, not the raw underlying error text. Omitted when reachable. */
             error?: string;
             errorKind?: components["schemas"]["ForgeErrorKind"];
+            /** @description The 5xx status the forge answered with, set only when errorKind is upstream_error. The forge is not shown as down until three fetches in a row have failed, whatever the cause, with the latest a 5xx; one failure among healthy ones changes nothing. */
+            upstreamStatus?: number;
             /** @description Repositories with write access this forge reported. */
             repoCount: number;
             /** @description GitHub's GraphQL budget — a completely separate 5000/hour allowance from rateLimitREST, populated from the rateLimit block GitHub embeds in every GraphQL response. Never set for a forge with no GraphQL API (Forgejo). */
@@ -6982,6 +7022,90 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ActionError"];
+                };
+            };
+        };
+    };
+    getPullRequestRerunnable: {
+        parameters: {
+            query: {
+                forge: components["schemas"]["Forge"];
+                /** @description "owner/repo", matching a Repo.fullName from GET /api/v1/dashboard. */
+                fullName: string;
+                /** @description Matching a PullRequest.number from GET /api/v1/dashboard. */
+                number: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Whether a rerun would find a failed job, and why not when it wouldn't. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        rerunnable: boolean;
+                        /** @description The forge's plain sentence for why nothing can be rerun. Present only when `rerunnable` is false. */
+                        reason?: string;
+                    };
+                };
+            };
+            /** @description `number` wasn't an integer, `fullName` wasn't "owner/repo", no credentials are saved for that forge, or that forge's client can't rerun checks. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description No valid session cookie or token was presented. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description The forge rejected the request as unauthorized. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description The forge reported the repo or pull request doesn't exist (or isn't visible to this token). */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description The forge rate-limited the request. */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description The forge was unreachable, or answered with something this app couldn't classify more specifically. */
+            502: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
                 };
             };
         };
