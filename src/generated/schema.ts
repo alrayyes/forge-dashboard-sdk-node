@@ -1815,6 +1815,44 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/images": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Read an image embedded in a forge's Markdown, through the server
+         * @description The details dialog shows the images in a description or comment by
+         *     pointing its `<img>` here, never at the forge or a third party. The
+         *     server fetches the image and returns the bytes, so the browser sends no
+         *     request to another host, and a private repository's attachment loads
+         *     without the forge token ever reaching the browser.
+         *
+         *     Only the forge the item belongs to is reached. Forgejo: the saved
+         *     instance, with the saved token sent to that host only. GitHub:
+         *     `github.com` and its user-content hosts (`user-images`,
+         *     `private-user-images` and `raw.githubusercontent.com`), without a
+         *     token, since its attachment links are signed. Any other host, scheme or
+         *     address answers 403 without a request. A redirect is followed only to
+         *     another allowed host, and at most three times. GitHub's hosts are also
+         *     refused at connect time if they resolve to a non-public address.
+         *
+         *     The body must be a PNG, JPEG, GIF or WebP by its own bytes, not by the
+         *     host's `Content-Type`, and at most 8 MiB. SVG and anything else answers
+         *     415. The answer carries `nosniff` and a sandboxing
+         *     `Content-Security-Policy`, and is cacheable by the browser for an hour.
+         */
+        get: operations["getImage"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/main-branches/advisories": {
         parameters: {
             query?: never;
@@ -8071,6 +8109,96 @@ export interface operations {
             };
             /** @description The dashboard has not loaded your repositories yet (a cold start or an outage), so it cannot say whether the repository is tracked. Retry shortly. */
             503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
+    getImage: {
+        parameters: {
+            query: {
+                forge: "github" | "forgejo";
+                /** @description The absolute address of the image, as written in the Markdown. */
+                url: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The image. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "image/png": string;
+                    "image/jpeg": string;
+                    "image/gif": string;
+                    "image/webp": string;
+                };
+            };
+            /** @description `url` is missing, `forge` is not github or forgejo, or no credentials are saved for that forge. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description No valid session cookie or token was presented. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description The address is outside the forge's hosts, or the saved token can't read the image. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description The forge has no such image. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description The image is over 8 MiB. */
+            413: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description The address does not serve a PNG, JPEG, GIF or WebP image. */
+            415: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description The forge was unreachable or answered something this app could not use. */
+            502: {
                 headers: {
                     [name: string]: unknown;
                 };
