@@ -2847,6 +2847,16 @@ export interface components {
             name: string;
             status: components["schemas"]["CheckStatus"];
             conclusion?: components["schemas"]["CheckConclusion"];
+            /**
+             * @description Why a queued Forgejo job has not started: `jobs` when it waits on
+             *     earlier jobs it needs (Forgejo's `blocked`), `runner` when it is
+             *     ready and waits for a runner to pick it up (`waiting`). The page
+             *     words it. Absent for GitHub, for a job that is not queued, and
+             *     for a blocked job in a run that has failed, which will never
+             *     start.
+             * @enum {string}
+             */
+            waitingFor?: "jobs" | "runner";
             /** @description That job's own page on the forge that ran it — never the pull request's own page. */
             url: string;
             /**
