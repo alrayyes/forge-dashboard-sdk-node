@@ -4182,6 +4182,20 @@ export interface components {
             releases: components["schemas"]["NavPullRequestCount"];
             bots: components["schemas"]["NavPullRequestCount"];
         };
+        /**
+         * @description How many draft pull requests the board left out, per page that lists
+         *     them: release pull requests under `releases`, Dependabot and Renovate
+         *     under `bots`, the rest under `pullRequests`, the same split as
+         *     `navCounts`. A page shows its Show drafts button only when its own
+         *     number is above zero, so the button never appears on a page where it
+         *     would reveal nothing. Always present, with zeros when there is nothing
+         *     hidden or the request set `includeDrafts=true`.
+         */
+        HiddenDraftCounts: {
+            pullRequests: number;
+            releases: number;
+            bots: number;
+        };
         Dashboard: {
             /**
              * @description The signed-in user's queued actions, waiting and finished in the
@@ -4264,9 +4278,15 @@ export interface components {
              *     present, and `0` when the request set `includeDrafts=true`, so
              *     a client can render "N hidden" without a special case. Drafts
              *     in a repo the account ignores aren't counted, since none of
-             *     that repo's pull requests show.
+             *     that repo's pull requests show. The sum of `hiddenDraftsByPage`.
              */
             hiddenDrafts: number;
+            /**
+             * @description `hiddenDrafts` split by the page that lists each draft, so a page
+             *     reads its own number and never shows a Show drafts button for
+             *     drafts that belong on another page.
+             */
+            hiddenDraftsByPage: components["schemas"]["HiddenDraftCounts"];
             /**
              * @description How many pull requests the user hid that are still open and not
              *     expired. Always present, so a client can render "Hidden (N)"
