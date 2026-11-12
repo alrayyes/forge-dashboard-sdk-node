@@ -4148,6 +4148,14 @@ export interface components {
              */
             generatedAt: string;
             /**
+             * @description True for the first five minutes after the server process started.
+             *     A restart empties the in-memory state and the first full refresh is
+             *     the heaviest moment, so a forge that has not answered yet is
+             *     starting up, not down. A client words its unreachable banner as
+             *     starting up while this is true. Always present.
+             */
+            recentlyStarted: boolean;
+            /**
              * @description How often, in seconds, a client should re-read GET
              *     /api/v1/dashboard. The server's advice, so a client needs no
              *     interval of its own. The read is cheap and never calls a
