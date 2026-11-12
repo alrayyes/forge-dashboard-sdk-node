@@ -2945,8 +2945,18 @@ export interface components {
             /** @description True when the start of the output was cut to fit the size cap. */
             truncated: boolean;
         };
+        /**
+         * @description How a pull request relates to an issue: `closes` (it will close the
+         *     issue on merge), `refs` (it says Refs, Ref, Related to or See, so it
+         *     works on an issue that stays open) or `mentions` (the issue is named
+         *     in passing). A pull request holds an issue under one relation, closes
+         *     first.
+         * @enum {string}
+         */
+        IssueRelation: "closes" | "refs" | "mentions";
         /** @description One issue a pull request will close when it merges. */
         ClosingIssue: {
+            relation: components["schemas"]["IssueRelation"];
             /** @description The issue's repository as `owner/name`, which is not always the pull request's own. */
             repo: string;
             number: number;
@@ -2968,11 +2978,12 @@ export interface components {
             pageUrl: string;
         };
         /**
-         * @description One issue or pull request a pull request mentions without closing it.
-         *     The number is an issue's or a pull request's, which the forge's address
-         *     tells apart.
+         * @description One issue or pull request a pull request mentions or references
+         *     without closing it. The number is an issue's or a pull request's,
+         *     which the forge's address tells apart.
          */
         MentionedIssue: {
+            relation: components["schemas"]["IssueRelation"];
             /** @description The repository as `owner/name`, which is not always the pull request's own. */
             repo: string;
             number: number;
@@ -3541,6 +3552,19 @@ export interface components {
              *     so one aimed elsewhere always lists none.
              */
             closesIssues: components["schemas"]["ClosingIssue"][];
+            /**
+             * @description The issues the title or description references with a keyword,
+             *     work on a ticket that stays open: `Refs`, `Ref`, `Related to` or
+             *     `See`, with an optional colon, then `#NUMBER` or
+             *     `owner/repo#NUMBER` (several may follow one keyword, as in
+             *     `Refs #3, #4 and #5`), at most 20, in order of first appearance and
+             *     without repeats. Each entry has `relation` `refs`. A ticket the
+             *     pull request also closes is only in `closesIssues`. Read from the
+             *     title and description on both forges, with the same rules as
+             *     `mentionsIssues` for code, comments and link text. Always present,
+             *     and empty when there are none.
+             */
+            refsIssues: components["schemas"]["MentionedIssue"][];
             /**
              * @description The issues and pull requests the title or description mentions
              *     without closing them, in order of first appearance and without
