@@ -1870,7 +1870,15 @@ export interface paths {
          *     instance, with the saved token sent to that host only. GitHub:
          *     `github.com` and its user-content hosts (`user-images`,
          *     `private-user-images` and `raw.githubusercontent.com`), without a
-         *     token, since its attachment links are signed. Any other host, scheme or
+         *     token, since its attachment links are signed. A
+         *     `github.com/user-attachments/...` link in a private repository is not
+         *     served unsigned, so when `fullName` and `number` (or `tag`) name the
+         *     item it sits in, the server reads that item's rendered HTML through the
+         *     GitHub API with the saved token and fetches the signed address found
+         *     there instead, without the token. If the lookup finds nothing or fails, or the signed address is on a host
+         *     that isn't allowed or doesn't load, the link is fetched as written.
+         *     Each such image costs one GitHub API request, which is never served from
+         *     the ETag cache because the signature expires. Any other host, scheme or
          *     address answers 403 without a request. A redirect is followed only to
          *     another allowed host, and at most three times. GitHub's hosts are also
          *     refused at connect time if they resolve to a non-public address.
@@ -8345,6 +8353,16 @@ export interface operations {
                 forge: "github" | "forgejo";
                 /** @description The absolute address of the image, as written in the Markdown. */
                 url: string;
+                /**
+                 * @description GitHub only. "owner/repo" of the issue, pull request or release the
+                 *     image is embedded in. Used with `number` or `tag` to find a private
+                 *     attachment's signed address.
+                 */
+                fullName?: string;
+                /** @description GitHub only. The issue or pull request the image is embedded in. */
+                number?: number;
+                /** @description GitHub only. The release the image is embedded in; wins over `number`. */
+                tag?: string;
             };
             header?: never;
             path?: never;
