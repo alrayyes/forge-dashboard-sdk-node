@@ -4074,11 +4074,22 @@ export interface components {
              * @description The open pull requests that mention the issue without closing it,
              *     the other side of a pull request's `mentionsIssues`, ordered by
              *     repository and number and with the same entry as
-             *     `linkedPullRequests`. A pull request that closes the issue is only
-             *     in `linkedPullRequests`. Always present, and empty when there are
-             *     none. The pull requests counted are the same as in `linkedPullRequests`.
+             *     `linkedPullRequests`. A pull request that closes or references the
+             *     issue is only in that list. Always present, and empty when there
+             *     are none. The pull requests counted are the same as in
+             *     `linkedPullRequests`.
              */
             mentionedByPullRequests: components["schemas"]["LinkedPullRequest"][];
+            /**
+             * @description The open pull requests that reference the issue without closing it
+             *     (`Refs #5`, `Related to #5`, `See #5`), the other side of a pull
+             *     request's `refsIssues`, ordered by repository and number and with
+             *     the same entry as `linkedPullRequests`. A pull request that closes
+             *     the issue is only in `linkedPullRequests`. Always present, and
+             *     empty when there are none. The pull requests counted are the same
+             *     as in `linkedPullRequests`.
+             */
+            referencedByPullRequests: components["schemas"]["LinkedPullRequest"][];
             /**
              * @description True for an issue a bot keeps open and rewrites, Renovate's
              *     "Dependency Dashboard", which is not work for a person. The
