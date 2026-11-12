@@ -3220,7 +3220,8 @@ export interface components {
          *     looks like while the forge rechecks it. The row says "Checking for
          *     conflicts" for about 90 seconds. It is time limited: if the flag
          *     stays false for the same head and base, the status becomes
-         *     "conflicting".
+         *     "conflicting", with conflictConfirmed false unless a refused merge or
+         *     update named a conflict.
          *     "unstable" is GitHub's UNSTABLE: the pull request can be merged, but
          *     a check that branch protection doesn't require is failing or still
          *     running. Merge stays available.
@@ -3375,6 +3376,21 @@ export interface components {
             ci: components["schemas"]["CIStatus"];
             checks: components["schemas"]["CheckCounts"];
             mergeStatus: components["schemas"]["MergeStatus"];
+            /**
+             * @description Forgejo only, and only with mergeStatus "conflicting". True when a
+             *     merge or update of this pull request was refused naming a
+             *     conflict. False when no refusal has, and the status is only the
+             *     forge's mergeable flag staying false for about 90 seconds on the
+             *     same head and base. Left out on GitHub, which reports conflicts
+             *     itself, and on every other status. It is dropped when the pull
+             *     request gets a new head or its base moves.
+             */
+            conflictConfirmed?: boolean;
+            /**
+             * @description The files the refusal named, when it named any. Left out unless
+             *     conflictConfirmed is true.
+             */
+            conflictFiles?: string[];
             /**
              * @description Whether this pull request's base branch has moved since its
              *     merge-base was computed. Deliberately its own field rather
