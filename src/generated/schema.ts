@@ -2330,6 +2330,16 @@ export interface components {
              */
             renovateAuthors: string[];
             /**
+             * @description Other hosts a Forgejo avatar was refused for lately: the image
+             *     proxy only fetches from the saved instance, so an avatar on
+             *     Gravatar or Libravatar is skipped and the page shows an initial.
+             *     Lowercase, sorted, at most eight, and never the instance's own
+             *     host. A host is listed while its avatars keep being asked for and
+             *     drops off after about ten minutes without one, so the list is
+             *     empty when nothing is skipped. Held in memory: a restart empties it.
+             */
+            forgejoSkippedAvatarHosts: string[];
+            /**
              * @description The signed-in user's own theme preference. Empty
              *     means "system" — follow the browser's prefers-color-scheme
              *     rather than a saved choice. Set only from Settings; every
@@ -2406,6 +2416,16 @@ export interface components {
             hideDependencyDashboard: boolean;
             ignoredTitles: string[];
             ignoredTitleCounts: (number | null)[];
+            /**
+             * @description Other hosts a Forgejo avatar was refused for lately: the image
+             *     proxy only fetches from the saved instance, so an avatar on
+             *     Gravatar or Libravatar is skipped and the page shows an initial.
+             *     Lowercase, sorted, at most eight, and never the instance's own
+             *     host. A host is listed while its avatars keep being asked for and
+             *     drops off after about ten minutes without one, so the list is
+             *     empty when nothing is skipped. Held in memory: a restart empties it.
+             */
+            forgejoSkippedAvatarHosts: string[];
             /** @enum {string} */
             theme: "" | "light" | "dark";
             timezone: string;
