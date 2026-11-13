@@ -3331,6 +3331,19 @@ export interface components {
             dependabotCommandsBlocked?: string;
             /** @description Why this forge can't rerun checks. Set only for a Forgejo whose version is 7 to 16, which has no API route for it. A version below 7 is left to the forge, because a Gitea numbers itself that way. The version is read in the background, read again after an hour while it blocks, and retried after a failed read or one that gives no number. A block that has gone stale is dropped when the read fails. Rerun failed checks is not offered for the forge, and the page shows this text where the button would be. Omitted when rerunning works or the version could not be read. */
             rerunChecksBlocked?: string;
+            /** @description What the forge's own status page reports, set only for GitHub, only while it is unreachable (reachable is false, errorKind unreachable, upstream_error or unknown), and only when the page names an incident or a degraded component the dashboard uses (API Requests, Pull Requests, Actions or Webhooks). The page is read only after a failed call, at most once a minute, with a request that carries nothing about the user. Omitted when the page reports nothing there, when it can't be read, and for Forgejo, which has no such page. A client says "GitHub reports an incident" and leaves the cause of a failure with no incident to the forge's own error. */
+            providerStatus?: components["schemas"]["ProviderStatus"];
+        };
+        ProviderStatus: {
+            /**
+             * @description The status page's overall level. It covers every GitHub component, including ones the dashboard doesn't use, so read incidents and components for what concerns this service.
+             * @enum {string}
+             */
+            indicator: "none" | "minor" | "major" | "critical";
+            /** @description The affected components the dashboard uses, as the page names them ("Pull Requests"). */
+            components?: string[];
+            /** @description Titles of the open incidents on those components. */
+            incidents?: string[];
         };
         ForgeApiStats: {
             /**
