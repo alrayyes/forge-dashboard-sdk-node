@@ -1881,9 +1881,15 @@ export interface paths {
          *     refused at connect time if they resolve to a non-public address.
          *
          *     The body must be a PNG, JPEG, GIF or WebP by its own bytes, not by the
-         *     host's `Content-Type`, and at most 8 MiB. SVG and anything else answers
-         *     415. The answer carries `nosniff` and a sandboxing
-         *     `Content-Security-Policy`, and is cacheable by the browser for an hour.
+         *     host's `Content-Type`, and at most 8 MiB (512 KiB with `kind=avatar`).
+         *     SVG and anything else answers 415.
+         *
+         *     The cost is bounded. At most 8 fetches run upstream at once; another
+         *     request waits up to 5 seconds for a slot, then answers 503 with
+         *     `Retry-After`. A fetched image is served again from a server-side cache
+         *     for 5 minutes, without a new upstream fetch. The answer carries
+         *     `nosniff` and a sandboxing `Content-Security-Policy`, and is cacheable
+         *     by the browser for an hour.
          */
         get: operations["getImage"];
         put?: never;
@@ -8380,6 +8386,8 @@ export interface operations {
                 number?: number;
                 /** @description GitHub only. The release the image is embedded in; wins over `number`. */
                 tag?: string;
+                /** @description Set to `avatar` for an avatar or repository logo, which has a 512 KiB size cap instead of 8 MiB. */
+                kind?: "avatar";
             };
             header?: never;
             path?: never;
@@ -8399,7 +8407,7 @@ export interface operations {
                     "image/webp": string;
                 };
             };
-            /** @description `url` is missing, `forge` is not github or forgejo, or no credentials are saved for that forge. */
+            /** @description `url` is missing, `forge` is not github or forgejo, `kind` is set to something other than `avatar`, or no credentials are saved for that forge. */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -8435,7 +8443,7 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description The image is over 8 MiB. */
+            /** @description The image is over 8 MiB, or over 512 KiB for `kind=avatar`. */
             413: {
                 headers: {
                     [name: string]: unknown;
@@ -8456,6 +8464,16 @@ export interface operations {
             /** @description The forge was unreachable or answered something this app could not use. */
             502: {
                 headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Too many images are loading; no fetch slot freed within 5 seconds. Retry after the `Retry-After` delay. */
+            503: {
+                headers: {
+                    "Retry-After"?: string;
                     [name: string]: unknown;
                 };
                 content: {
