@@ -8431,6 +8431,21 @@ export interface operations {
                 comment?: number;
                 /** @description Set to `avatar` for an avatar or repository logo, which has a 512 KiB size cap instead of 8 MiB. */
                 kind?: "avatar";
+                /**
+                 * @description Scale the image down to this many pixels wide, keeping its aspect
+                 *     ratio, for a thumbnail slot. Absent, the original bytes are
+                 *     returned, so a viewer can show the full image. Any other value,
+                 *     or one not written plainly (`0320`, `+320`), answers 400; it is
+                 *     refused, not snapped. The original is returned
+                 *     unchanged when it is no wider, when it is a GIF (which may be
+                 *     animated), when it cannot be decoded (an animated WebP, say), when it is
+                 *     a JPEG with an EXIF orientation other than upright (orientation in a
+                 *     PNG or WebP is not read), or
+                 *     when scaling would not make it smaller. A JPEG stays a JPEG; a PNG
+                 *     or WebP comes back as a PNG. A source over 16 million pixels,
+                 *     judged from its header before anything is decoded, answers 413.
+                 */
+                width?: 320 | 640 | 960 | 1280;
             };
             header?: never;
             path?: never;
@@ -8450,7 +8465,7 @@ export interface operations {
                     "image/webp": string;
                 };
             };
-            /** @description `url` is missing, `forge` is not github or forgejo, `kind` is set to something other than `avatar`, or no credentials are saved for that forge. */
+            /** @description `url` is missing, `forge` is not github or forgejo, `kind` is set to something other than `avatar`, `width` is not one of the allowed sizes, or no credentials are saved for that forge. */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -8486,7 +8501,7 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description The image is over 8 MiB, or over 512 KiB for `kind=avatar`. */
+            /** @description The image is over 8 MiB, or over 512 KiB for `kind=avatar`, or over 16 million pixels when `width` asks for a resize. */
             413: {
                 headers: {
                     [name: string]: unknown;
