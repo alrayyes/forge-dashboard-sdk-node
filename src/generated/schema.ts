@@ -3468,6 +3468,14 @@ export interface components {
              */
             behind: boolean;
             /**
+             * @description Whether a Dependabot pull request's head branch holds a commit
+             *     Dependabot didn't write, such as a bot refreshing a lockfile on it.
+             *     Dependabot refuses to rebase such a branch, so the pull request
+             *     offers Update branch instead of Dependabot's Rebase. Always false
+             *     for any other author. Always present.
+             */
+            editedByOthers: boolean;
+            /**
              * @description The commit the pull request's head branch points at. A bot's
              *     rebase moves it, which shows the bot acted even when the pull
              *     request is still reported behind, or wasn't behind to begin
