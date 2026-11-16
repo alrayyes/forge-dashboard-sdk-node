@@ -3371,6 +3371,8 @@ export interface components {
             dependabotCommands: boolean;
             /** @description Where the repository advisories come from. Open-ended, so a new source is not a breaking change; today `dependabot` and `osv`. */
             advisorySource: string;
+            /** @description True when an `unknown` advisory answer is worth showing only if the row names a reason. Without one it usually means a repository with nothing to check. False when every `unknown` answer is a failure to read. */
+            advisoryUnknownNeedsReason: boolean;
             /** @description The forge's public status page, or an empty string when it has none. */
             statusPageUrl: string;
             /** @description How the forge budgets requests. Open-ended; today `graphql_and_rest` (two separate allowances) and `rest`. */
