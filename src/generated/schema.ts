@@ -2168,7 +2168,7 @@ export interface components {
              *     auto-merge: already clean, use Merge).
              * @enum {string}
              */
-            code: "already_merged" | "already_closed" | "not_mergeable" | "conflict" | "behind" | "checks_pending" | "checks_failing" | "blocked_by_protection" | "already_up_to_date" | "auto_merge_not_allowed" | "ready_to_merge" | "permission" | "rate_limited" | "forge_error" | "not_rate_limited" | "not_open" | "not_reopenable" | "unknown";
+            code: "already_merged" | "already_closed" | "not_mergeable" | "conflict" | "behind" | "checks_pending" | "checks_failing" | "blocked_by_protection" | "already_up_to_date" | "auto_merge_not_allowed" | "ready_to_merge" | "permission" | "rate_limited" | "forge_error" | "forge_unreachable" | "not_rate_limited" | "not_open" | "not_reopenable" | "unknown";
             /**
              * @description A short reason in plain words, safe to show a person, always.
              *     With `code: unknown` it is the forge's own sentence when that
@@ -3353,6 +3353,32 @@ export interface components {
             rerunChecksBlocked?: string;
             /** @description What the forge's own status page reports, set only for GitHub, only while it is unreachable (reachable is false, errorKind unreachable, upstream_error or unknown), and only when the page names an incident or a degraded component the dashboard uses (API Requests, Pull Requests, Actions or Webhooks). The page is read only after a failed call, at most once a minute, with a request that carries nothing about the user. Omitted when the page reports nothing there, when it can't be read, and for Forgejo, which has no such page. A client says "GitHub reports an incident" and leaves the cause of a failure with no incident to the forge's own error. */
             providerStatus?: components["schemas"]["ProviderStatus"];
+            capabilities: components["schemas"]["ForgeCapabilities"];
+        };
+        /** @description What one forge can do, as facts a client reads instead of testing the forge's name. A forge this service learns to talk to is one more set of values here, so a client that reads these needs no change for it. */
+        ForgeCapabilities: {
+            /** @description True when this app holds an armed auto-merge and merges the pull request itself once its checks pass. False when the forge holds it and merges on its own. */
+            autoMergeHeldByApp: boolean;
+            /** @description True when the forge reports check results by webhook, so a pending run is polled only when no event arrived. False when results are found by polling. */
+            checksViaWebhook: boolean;
+            /** @description True when a job's log can be read while the job runs. */
+            servesRunningLog: boolean;
+            /** @description True when a failed job's excerpt is read from the log endpoint (`excerpt=true`). False when the check list already carries it. */
+            serverLogExcerpts: boolean;
+            /** @description True when a run can be held until a person approves it. */
+            approvalGatedRuns: boolean;
+            /** @description True when a `@dependabot` comment does anything on this forge. */
+            dependabotCommands: boolean;
+            /** @description Where the repository advisories come from. Open-ended, so a new source is not a breaking change; today `dependabot` and `osv`. */
+            advisorySource: string;
+            /** @description The forge's public status page, or an empty string when it has none. */
+            statusPageUrl: string;
+            /** @description How the forge budgets requests. Open-ended; today `graphql_and_rest` (two separate allowances) and `rest`. */
+            rateLimitModel: string;
+            /** @description The forms the forge's text uses to reference an issue. Open-ended; today `hash_or_gh_prefix` (a hash sign or a `GH-` prefix before the number) and `hash` (the hash sign only). */
+            issueRefSyntax: string;
+            /** @description The forge's name as a person reads it, such as `GitHub`. */
+            label: string;
         };
         ProviderStatus: {
             /**
@@ -4047,6 +4073,14 @@ export interface components {
                 message: string;
                 /** @description What unlocks it, when something does. */
                 next?: string;
+                /**
+                 * Format: date-time
+                 * @description Only with `forge_unreachable`: when the rows on show were
+                 *     read. While the forge can't be asked every action is listed
+                 *     blocked with this code, whatever reason the earlier answer
+                 *     gave, and `message` is the same sentence a row's pills use.
+                 */
+                since?: string;
             };
         };
         /**
@@ -4063,6 +4097,11 @@ export interface components {
             code: string;
             /** @description Plain words, safe to show a person. */
             message: string;
+            /**
+             * Format: date-time
+             * @description Set only with `forge_unreachable`, and says when the rows on show were read.
+             */
+            since?: string;
             /** @description What unlocks it or what to do about it, when there is something. */
             next?: string;
             /**
