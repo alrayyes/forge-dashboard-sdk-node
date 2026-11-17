@@ -1979,9 +1979,17 @@ export interface paths {
          * @description What the advisories dialog on the Main branches page shows for one
          *     repository: each open Dependabot alert with the fields GitHub's own
          *     alert page shows. The list and the detail view are the same answer, so
-         *     opening one advisory costs no second call. Fetched live on every call,
-         *     never as part of GET /api/v1/main-branches' snapshot, so a repository
-         *     nobody opens costs no budget.
+         *     opening one advisory costs no second call. Never part of GET
+         *     /api/v1/main-branches' snapshot, so a repository nobody opens costs no
+         *     budget.
+         *
+         *     The dashboard keeps the list it reads for 15 minutes, the same as a
+         *     row's advisory count, and the read that fills a row's count keeps the
+         *     list too. So an open within that time answers from the kept list with
+         *     no call to the forge, and `readAt` says when it was read. Pass
+         *     `refresh=true` to read the forge again. If a read, on a refresh or because
+         *     the kept list had aged out, fails or is rate limited, the answer is the
+         *     last good list with `refreshFailed` set.
          *
          *     Sorted by severity, highest first, then newest first. GitHub reads them
          *     through the Dependabot alerts of the repository. A Forgejo repository
@@ -4680,6 +4688,16 @@ export interface components {
              *     package the lock files list.
              */
             partial?: boolean;
+            /**
+             * Format: date-time
+             * @description Set when the read that produced this count also kept the full list
+             *     behind it, so opening the advisories dialog needs no call to the
+             *     forge: GET /api/v1/main-branches/advisories answers from that list.
+             *     It is when the forge was read. Absent when no list is kept, and
+             *     the dashboard then reads one when the dialog opens. The advisory
+             *     text itself is never part of the stream.
+             */
+            listReadAt?: string;
         };
         /**
          * @description "known" is an answer the forge gave. "unknown" is no answer, and must
@@ -4718,6 +4736,19 @@ export interface components {
             url?: string;
             /** @description Empty when none are open and whenever `state` is "unknown". Highest severity first, then newest first. */
             advisories: components["schemas"]["AdvisoryItem"][];
+            /**
+             * Format: date-time
+             * @description When the forge was read for this list. The same value on every answer served from the dashboard's own copy, so a client can tell a changed list from a repeated one.
+             */
+            readAt?: string;
+            /**
+             * @description Set when the read failed or was rate limited (a refresh, or an
+             *     open after the kept list had aged out) and `advisories` is the last good list instead, never
+             *     an empty one. `readAt` then says how old that list is. Absent when
+             *     the read succeeded.
+             * @enum {string}
+             */
+            refreshFailed?: "failed" | "throttled";
         };
         /** @description One open Dependabot alert with the fields GitHub's alert page shows. */
         AdvisoryItem: {
@@ -8898,6 +8929,8 @@ export interface operations {
                 forge: components["schemas"]["Forge"];
                 /** @description "owner/repo", matching a MainBranch.fullName from GET /api/v1/main-branches. */
                 fullName: string;
+                /** @description Read the forge again instead of answering from the list the dashboard kept. */
+                refresh?: boolean;
             };
             header?: never;
             path?: never;
