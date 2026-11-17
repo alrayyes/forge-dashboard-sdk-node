@@ -3320,6 +3320,7 @@ export interface components {
              * @enum {string}
              */
             state: "open" | "closed";
+            pullRequest?: components["schemas"]["IssuePullRequest"];
             description: components["schemas"]["DetailsBody"];
             /** @description The conversation, oldest first, at most the first 50. */
             comments: components["schemas"]["DetailsComment"][];
@@ -3327,6 +3328,22 @@ export interface components {
             commentCount: number;
             /** @description True when `commentCount` is more than the comments returned. */
             commentsTruncated: boolean;
+        };
+        /**
+         * @description Present only when `kind` is `pullRequest`: what the header of a pull
+         *     request needs when the board has no row for it, because it is closed,
+         *     merged or in a repository the board doesn't track. The dialog words it.
+         */
+        IssuePullRequest: {
+            /** @description The pull request's title, as the forge has it now. */
+            title: string;
+            /**
+             * @description Where the pull request stands. `closed` means closed without merging.
+             * @enum {string}
+             */
+            state: "open" | "closed" | "merged";
+            /** @description Who opened it. Null for a deleted account. */
+            author: null | components["schemas"]["Person"];
         };
         CheckSubject: {
             /** @enum {string} */
