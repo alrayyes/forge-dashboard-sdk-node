@@ -2907,6 +2907,14 @@ export interface components {
             status: components["schemas"]["CheckStatus"];
             conclusion?: components["schemas"]["CheckConclusion"];
             /**
+             * @description The forge's own word for the job's status, sent only when `status`
+             *     is "unknown", so a client can name what it cannot grade. Absent
+             *     for every other status. A finished job's own word is its
+             *     `conclusion`.
+             * @example brand_new_status
+             */
+            reportedStatus?: string;
+            /**
              * @description Why a queued Forgejo job has not started: `jobs` when it waits on
              *     earlier jobs it needs (Forgejo's `blocked`), `runner` when it is
              *     ready and waits for a runner to pick it up (`waiting`). The page
