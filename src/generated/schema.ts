@@ -3416,7 +3416,7 @@ export interface components {
             approvalGatedRuns: boolean;
             /** @description True when a `@dependabot` comment does anything on this forge. */
             dependabotCommands: boolean;
-            /** @description Where the repository advisories come from. Open-ended, so a new source is not a breaking change; today `dependabot` and `osv`. */
+            /** @description Where the repository advisories come from. Open-ended, so a new source is not a breaking change; today `dependabot` and `osv`. A client keys its advisory wording (notice text, unreadable reasons) by this value, not by the forge's name, and says something neutral for a source it has no words for. */
             advisorySource: string;
             /** @description True when an `unknown` advisory answer is worth showing only if the row names a reason. Without one it usually means a repository with nothing to check. False when every `unknown` answer is a failure to read. */
             advisoryUnknownNeedsReason: boolean;
