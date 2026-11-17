@@ -1325,6 +1325,10 @@ export interface paths {
          *     The error answers are those of GET /api/v1/pull-requests/details, with
          *     the same codes. An issue that doesn't exist is a 404, and a forge that
          *     can't be read is an error, never an empty thread.
+         *
+         *     The number may also be a pull request, which GitHub and Forgejo both
+         *     answer here with `kind: pullRequest`. A number that is neither is a 404
+         *     in plain words, never the forge's raw error text.
          */
         get: operations["getIssueDetails"];
         put?: never;
@@ -1877,8 +1881,10 @@ export interface paths {
          *     Only for a repository the dashboard tracks for you; any other answers 404
          *     without asking the forge.
          *
-         *     Fetched live on every call and never as part of a snapshot, since a log
-         *     can be large and most are never opened. GitHub reads the job's log
+         *     Never as part of a snapshot, since a log
+         *     can be large and most are never opened. A finished job's output is kept
+         *     in memory (see `finishedAt`) and served again without asking the forge.
+         *     GitHub reads the job's log
          *     through its REST API (one request, then a short-lived download). Forgejo
          *     reads it through the job logs endpoint of its Actions API.
          *
@@ -3290,6 +3296,15 @@ export interface components {
         };
         /** @description What the issue dialog shows. */
         IssueDetails: {
+            /**
+             * @description What the number turned out to be. A forge shares one number space
+             *     between issues and pull requests, so a bare number in a description
+             *     can name either, and this endpoint answers for both. The
+             *     client decides which dialog to open; a pull request's `state` is
+             *     `closed` once it is merged as well as when it is closed unmerged.
+             * @enum {string}
+             */
+            kind: "issue" | "pullRequest";
             /**
              * @description Whether the forge has the issue open or closed right now. The
              *     dialog draws its status from this, so an issue closed or reopened
@@ -8635,6 +8650,25 @@ export interface operations {
                 fullName: string;
                 /** @description Matching a Check.jobId. */
                 jobId: number;
+                /**
+                 * @description Matching a Check.completedAt. Send it for a job that has finished and
+                 *     the server keeps its full output in memory once the job has been
+                 *     finished for 30 seconds, so the next open of the same job costs no
+                 *     forge request. The server takes this time on trust: it has no
+                 *     per-job record of its own to check it against, so a caller who sends
+                 *     an old time for a running job gets that partial output kept under
+                 *     that key. The key includes the time, so nobody else's open reads it.
+                 *     Leave it out for a job that is running: its output is
+                 *     never kept. A finish time in the future is not kept either. The
+                 *     response is still `Cache-Control: no-store`, so a browser asks again.
+                 */
+                finishedAt?: string;
+                /**
+                 * @description Matching a Check.runAttempt, 0 or left out where the forge doesn't
+                 *     number attempts. With `finishedAt` it names the run the kept output
+                 *     belongs to, so a rerun reads afresh.
+                 */
+                attempt?: number;
                 /**
                  * @description True to answer the job's excerpt (the last lines, at most 2,000
                  *     characters) instead of its output. Forgejo only; any other forge
