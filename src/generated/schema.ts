@@ -359,6 +359,66 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/connections/forgejo": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Start linking a Forgejo account with OAuth
+         * @description Begins the authorization code flow with PKCE (RFC 9700) against the
+         *     given Forgejo instance and returns the instance's consent page URL.
+         *     The browser goes there; Forgejo sends it back to
+         *     `GET /api/v1/connections/forgejo/callback`. Fails with 409 when an
+         *     instance is already connected: the instance is locked until
+         *     `DELETE /api/v1/connections/forgejo`, and `PUT /api/v1/settings`
+         *     refuses to change `forgejoUrl` meanwhile. Replaces pasting a Forgejo
+         *     token. Needs `FORGEJO_OAUTH_CLIENT_ID` and
+         *     `FORGEJO_OAUTH_CLIENT_SECRET` on the server; see
+         *     `SettingsResponse.forgejoOAuthConfigured`.
+         */
+        post: operations["startForgejoConnection"];
+        /**
+         * Unlink the Forgejo account
+         * @description Deletes the stored token pair. When a pasted Forgejo token is saved,
+         *     the instance URL and account name stay and the dashboard goes back to
+         *     that token; otherwise both are cleared. Passkey sign-in is unaffected.
+         */
+        delete: operations["disconnectForgejo"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/connections/forgejo/callback": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Forgejo's redirect back after consent
+         * @description Checks `state` (single use, ten minutes), exchanges `code` with the
+         *     PKCE verifier, stores the token pair encrypted, and redirects the
+         *     browser to `/settings`. A missing, wrong, used or expired `state`
+         *     answers 400 and stores nothing. So does a refused code, a bad PKCE
+         *     verifier, or an error the forge sent back in the query. Nothing is
+         *     stored when the account name can't be read either (502).
+         */
+        get: operations["finishForgejoConnection"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/settings/filter-state": {
         parameters: {
             query?: never;
@@ -2299,6 +2359,18 @@ export interface components {
             /** @description Whether a Forgejo token is currently saved. */
             forgejoTokenSet: boolean;
             /**
+             * @description Whether this server has a Forgejo OAuth client (`FORGEJO_OAUTH_CLIENT_ID`
+             *     and `FORGEJO_OAUTH_CLIENT_SECRET`), so `POST /api/v1/connections/forgejo`
+             *     can work at all.
+             */
+            forgejoOAuthConfigured: boolean;
+            /**
+             * @description Whether a Forgejo account is linked with OAuth. Like `forgejoTokenSet`
+             *     it says only that one is on file; the access and refresh tokens are
+             *     never returned. A linked account wins over a pasted token.
+             */
+            forgejoOAuthConnected: boolean;
+            /**
              * @description Identifies this user in a webhook URL
              *     (`/api/webhooks/{provider}/{webhookToken}`). Generated on
              *     first visit to Settings and stable after that.
@@ -2404,6 +2476,8 @@ export interface components {
             forgejoUrl: string;
             forgejoUsername: string;
             forgejoTokenSet: boolean;
+            forgejoOAuthConfigured: boolean;
+            forgejoOAuthConnected: boolean;
             /**
              * @description Whether this user's webhook token and secret exist. They are
              *     created the first time the Settings page reads
@@ -2489,6 +2563,17 @@ export interface components {
              *     characters, is a 400 too. See SettingsResponse.ignoredTitles.
              */
             ignoredTitles?: string[];
+        };
+        StartForgejoConnectionRequest: {
+            /**
+             * Format: uri
+             * @example https://git.example.com
+             */
+            instanceUrl: string;
+        };
+        ConnectionAuthorizeResponse: {
+            /** Format: uri */
+            authorizeUrl: string;
         };
         /** @description See GET /api/v1/settings/theme's own description. */
         ThemeResponse: {
@@ -5607,6 +5692,133 @@ export interface operations {
             };
             /** @description No valid session cookie was presented. */
             401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
+    startForgejoConnection: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["StartForgejoConnectionRequest"];
+            };
+        };
+        responses: {
+            /** @description Where to send the browser. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ConnectionAuthorizeResponse"];
+                };
+            };
+            /** @description The instance URL isn't a valid http(s) URL, or OAuth isn't configured on this server. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description No valid session cookie was presented. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description A Forgejo instance is already connected. Disconnect first. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
+    disconnectForgejo: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Disconnected, or there was nothing to disconnect. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description No valid session cookie was presented. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
+    finishForgejoConnection: {
+        parameters: {
+            query?: {
+                code?: string;
+                state?: string;
+                error?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Linked. Redirects to `/settings`. */
+            303: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Unknown, used or expired state, or the code exchange failed. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description No valid session cookie was presented. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description The token was granted but the instance wouldn't say whose account it is. Nothing is stored. */
+            502: {
                 headers: {
                     [name: string]: unknown;
                 };
