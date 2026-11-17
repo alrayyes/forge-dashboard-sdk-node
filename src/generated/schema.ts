@@ -2637,7 +2637,11 @@ export interface components {
              *     is simply waiting for the next refresh to merge it.
              */
             code?: string;
-            /** @description Plain words, safe to show a person. */
+            /**
+             * @description Plain words, safe to show a person. A sentence that would name the
+             *     forge says "the forge" instead, and the page puts the forge's
+             *     label (`ForgeCapabilities.label`) in its place.
+             */
             message: string;
         };
         AutoMergedPullRequest: {
