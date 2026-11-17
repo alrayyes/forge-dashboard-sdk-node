@@ -3420,6 +3420,8 @@ export interface components {
             advisorySource: string;
             /** @description True when an `unknown` advisory answer is worth showing only if the row names a reason. Without one it usually means a repository with nothing to check. False when every `unknown` answer is a failure to read. */
             advisoryUnknownNeedsReason: boolean;
+            /** @description True when the forge sends the signed-in user's permissions with each repo it lists, so a repo that arrives without them is the forge's omission and says nothing about the user's role. False when the dashboard finds out by trying the endpoint instead. */
+            reportsRepoPermissions: boolean;
             /** @description The forge's public status page, or an empty string when it has none. */
             statusPageUrl: string;
             /** @description How the forge budgets requests. Open-ended; today `graphql_and_rest` (two separate allowances) and `rest`. */
