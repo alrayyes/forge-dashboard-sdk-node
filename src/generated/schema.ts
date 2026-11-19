@@ -3551,6 +3551,8 @@ export interface components {
             statusPageUrl: string;
             /** @description How the forge budgets requests. Open-ended; today `graphql_and_rest` (two separate allowances) and `rest`. */
             rateLimitModel: string;
+            /** @description The forge's published rules for its request budget, or an empty string when it has none. A client links to it from the rate limit explanation and shows no link when it is empty. */
+            rateLimitDocsUrl: string;
             /** @description The forms the forge's text uses to reference an issue. Open-ended; today `hash_or_gh_prefix` (a hash sign or a `GH-` prefix before the number) and `hash` (the hash sign only). */
             issueRefSyntax: string;
             /** @description The forge's name as a person reads it, such as `GitHub`. */
