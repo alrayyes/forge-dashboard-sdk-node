@@ -1,5 +1,12 @@
 # Changelog
 
+## [28.13.0](https://github.com/alrayyes/forge-dashboard-sdk-node/compare/v28.12.0...v28.13.0) (2026-11-19)
+
+
+### Features
+
+* **spec:** regenerate types from forge-dashboard openapi.yaml ([#487](https://github.com/alrayyes/forge-dashboard-sdk-node/issues/487)) ([2938e0b](https://github.com/alrayyes/forge-dashboard-sdk-node/commit/2938e0b3842cb02037592407800847549d712ba5))
+
 ## [28.12.0](https://github.com/alrayyes/forge-dashboard-sdk-node/compare/v28.11.0...v28.12.0) (2026-11-19)
 
 
