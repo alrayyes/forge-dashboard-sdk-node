@@ -3790,6 +3790,18 @@ export interface components {
              */
             awaitingWorkflowApproval: boolean;
             /**
+             * @description True while the forge has not yet listed every check of the head
+             *     commit, so `checks` counts some of them and the rest will arrive:
+             *     a client shouldn't present the counts as final. A fact only; the
+             *     client decides how to say it. Always present, and false when the
+             *     list is complete or the forge can't tell. On Forgejo it is true
+             *     when a run that is still running has jobs the counts leave out,
+             *     or has no job yet. On GitHub it is always false: the rollup
+             *     reports its checks by state and says nothing about checks still
+             *     to be created.
+             */
+            checksIncomplete: boolean;
+            /**
              * @description How many review comments the pull request has, the ones on a
              *     line of code. Ordinary conversation comments are counted apart,
              *     in `conversationComments`. Always present, and 0 when
