@@ -3557,6 +3557,12 @@ export interface components {
             issueRefSyntax: string;
             /** @description The forge's name as a person reads it, such as `GitHub`. */
             label: string;
+            /** @description The fixed public hosts an image embedded in the forge's text may come from, each matched by its exact name, over https on the default port. Empty means the forge's own saved instance. See `GET /api/v1/images`. */
+            imageHosts: string[];
+            /** @description Further fixed hosts that only avatars and repository logos load from. Empty when they live on the forge's own instance. */
+            avatarHosts: string[];
+            /** @description The address prefix of an attachment the forge serves only at a signed link found in the item's rendered body, such as `https://github.com/user-attachments/`. Empty when the forge has no such links. Passing `fullName` with the item then lets the server find the signed link. */
+            signedAttachmentPrefix: string;
         };
         ProviderStatus: {
             /**
