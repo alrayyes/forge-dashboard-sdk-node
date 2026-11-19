@@ -1313,6 +1313,10 @@ export interface paths {
          *     one for each comment's reactions (up to 50), so the reaction calls run
          *     at most eight at a time and stop at the first rate limit.
          *
+         *     `references` lists the items that refer to the issue. GitHub adds
+         *     them to the same query; Forgejo reads the issue's timeline once more, one
+         *     request per page of 50 events and an empty one to end on.
+         *
          *     Every text is Markdown exactly as the forge stores it (`format` is
          *     always `markdown`). The server neither converts nor sanitises it, so a
          *     client must render it with raw HTML disabled. Each text is cut at
@@ -3328,6 +3332,73 @@ export interface components {
             commentCount: number;
             /** @description True when `commentCount` is more than the comments returned. */
             commentsTruncated: boolean;
+            /**
+             * @description The items related to this one, incoming first and then outgoing.
+             *     An empty array means nothing is related. A closed or merged item
+             *     has them as well as an open one: the board's own pills list open
+             *     pull requests only.
+             *
+             *     The `incoming` entries are the items that refer to this one, as
+             *     the forge's own timeline records them, newest first, at most the
+             *     first 50.
+             *
+             *     The `outgoing` entries are the items this one's own title and
+             *     description refer to, in the order the text names them (closing
+             *     ones first, then references, then mentions), at most 20. The
+             *     forge records only what refers to an item, so the text is read
+             *     the way the board reads a pull request's and each named item is
+             *     looked up for its title and state. An item that can't be read
+             *     (missing, no access) is left out, and a lookup that fails leaves
+             *     the outgoing entries out without failing the read. A closing
+             *     keyword counts as `closes` only in a pull request, and the base
+             *     branch isn't checked; in an issue it is a `mentions`.
+             */
+            references: components["schemas"]["ItemReference"][];
+        };
+        /** @description One issue or pull request that is related to the item whose details were asked for. */
+        ItemReference: {
+            forge: components["schemas"]["Forge"];
+            /** @description The related item's repository as `owner/name`, which is not always the asked-for item's own. */
+            repo: string;
+            number: number;
+            /** @description The related item's title, as the forge has it now. */
+            title: string;
+            /** @description The related item's address on the forge. */
+            url: string;
+            /**
+             * @description The address on this dashboard that opens the related item's pop-up:
+             *     `/pull-requests.html?pr=` or `/issues.html?issue=`, then
+             *     `forge/owner/name/number`. A relative address.
+             */
+            pageUrl: string;
+            /**
+             * @description What the related number is. A forge shares one number space between the two.
+             * @enum {string}
+             */
+            kind: "issue" | "pullRequest";
+            /**
+             * @description Where the related item stands. Only a pull request is `merged`; `closed` means closed without merging.
+             * @enum {string}
+             */
+            state: "open" | "closed" | "merged";
+            /**
+             * @description `incoming` when the related item refers to the asked-for one,
+             *     `outgoing` when the asked-for one refers to it. The `relation` is
+             *     always the referring item's: what the related item does to the
+             *     asked-for one when `incoming`, what the asked-for one does to the
+             *     related item when `outgoing`.
+             * @enum {string}
+             */
+            direction: "incoming" | "outgoing";
+            /**
+             * @description What the referring item does to the referred-to one. `closes`
+             *     closes it when merged (a closing keyword). `refs` references it
+             *     without closing it (`Refs`, `Related to`, `See`). `mentions` only
+             *     names it. The forge's timeline does not tell the last two apart,
+             *     so a read from it says `mentions` for both.
+             * @enum {string}
+             */
+            relation: "closes" | "refs" | "mentions";
         };
         /**
          * @description Present only when `kind` is `pullRequest`: what the header of a pull
