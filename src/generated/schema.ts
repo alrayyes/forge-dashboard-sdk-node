@@ -1627,10 +1627,12 @@ export interface paths {
         /**
          * The running server's own version
          * @description The tag goreleaser stamped the running binary with ("dev" for a
-         *     build outside the release pipeline). Public and unauthenticated —
-         *     every page, including the pre-login screen, links to the matching
-         *     GitHub release from its footer so a person can tell what's
-         *     actually deployed without shelling into the box.
+         *     build outside the release pipeline). Needs a session or an API
+         *     token: a signed-out visitor learns nothing about the release,
+         *     since a version tells an attacker which known weaknesses to try.
+         *     The footer of every signed-in page reads it. It stays at this
+         *     address, outside `/api/v1`, because it says which major versions
+         *     the server speaks.
          */
         get: operations["getVersion"];
         put?: never;
@@ -8464,6 +8466,15 @@ export interface operations {
                      *     }
                      */
                     "application/json": components["schemas"]["Version"];
+                };
+            };
+            /** @description No valid session cookie was presented. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
                 };
             };
         };
