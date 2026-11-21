@@ -22,7 +22,7 @@ Test and coverage reports from the latest green run on `main`:
 - Node.js 20+ or [Bun](https://bun.sh) 1.1+ — anything with a native `fetch`.
 - A running forge-dashboard instance.
 - A personal API token for that instance (see "Authentication" below) —
-  every endpoint except `/healthz` and `/api/version` needs one.
+  every endpoint except `/healthz` needs one.
 
 ## Installation
 
@@ -77,8 +77,8 @@ SDK to refresh one automatically once it's gone.
 
 ## Usage
 
-`GET /api/version` needs no token and is a good first call to prove the
-client reaches the server at all. The client is a typed
+`GET /api/version` needs a token like every other endpoint, and is a good
+first call to prove the client reaches the server and your token works. The client is a typed
 [`openapi-fetch`](https://openapi-ts.dev/openapi-fetch/) instance, so every
 operation is `client.GET(path, ...)` / `client.POST(path, ...)`, returning
 `{ data, error, response }`:
@@ -86,7 +86,9 @@ operation is `client.GET(path, ...)` / `client.POST(path, ...)`, returning
 ```ts
 import { createForgeDashboardClient } from "@forge-dashboard/sdk-node";
 
-const client = createForgeDashboardClient("https://dashboard.example.com");
+const client = createForgeDashboardClient("https://dashboard.example.com", {
+  token: process.env.FORGE_DASHBOARD_TOKEN,
+});
 
 const { data } = await client.GET("/api/version", {});
 console.log("server version:", data?.version);
