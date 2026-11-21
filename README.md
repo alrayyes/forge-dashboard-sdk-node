@@ -78,8 +78,8 @@ SDK to refresh one automatically once it's gone.
 ## Usage
 
 `GET /api/version` needs a token like every other endpoint, and is a good
-first call to prove the client reaches the server and your token works. The client is a typed
-[`openapi-fetch`](https://openapi-ts.dev/openapi-fetch/) instance, so every
+first call to prove the client reaches the server and your token works. The
+client is a typed [`openapi-fetch`](https://openapi-ts.dev/openapi-fetch/) instance, so every
 operation is `client.GET(path, ...)` / `client.POST(path, ...)`, returning
 `{ data, error, response }`:
 
