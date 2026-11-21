@@ -20,11 +20,21 @@ describe.skipIf(!baseUrl)("contract", () => {
     expect(data?.status).toBe("ok");
   });
 
-  test("reports the running version", async () => {
-    const client = createForgeDashboardClient(baseUrl ?? "");
+  test("reports the running version to a signed-in client", async () => {
+    const client = createForgeDashboardClient(baseUrl ?? "", {
+      token: "contract-test-token",
+    });
     const { data, error } = await client.GET("/api/version");
 
     expect(error).toBeUndefined();
     expect(typeof data?.version).toBe("string");
+  });
+
+  test("refuses the version to a client with no token", async () => {
+    const client = createForgeDashboardClient(baseUrl ?? "", { token: "" });
+    const { data, response } = await client.GET("/api/version");
+
+    expect(response.status).toBe(401);
+    expect(data).toBeUndefined();
   });
 });
