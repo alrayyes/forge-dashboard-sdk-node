@@ -3172,6 +3172,13 @@ export interface components {
              * @example /issues.html?issue=github/alrayyes/hush-hush/12
              */
             pageUrl: string;
+            /**
+             * @description The issue's title as the board holds it, so a client can show it
+             *     on hover. Left out when the dashboard does not hold the issue
+             *     (closed, in a repo it does not track), and a client then words
+             *     the pill without it. Text, never markup.
+             */
+            title?: string;
         };
         /**
          * @description One issue or pull request a pull request mentions or references
@@ -3202,6 +3209,13 @@ export interface components {
              *     the dashboard does not track; a client then links to `url`.
              */
             tracked: boolean;
+            /**
+             * @description The title of the issue or pull request as the board holds it, so
+             *     a client can show it on hover. Left out when the dashboard does
+             *     not hold it, and a client then words the pill without it. Text,
+             *     never markup.
+             */
+            title?: string;
         };
         /** @description One open pull request that will close an issue when it merges. */
         LinkedPullRequest: {
@@ -3211,6 +3225,11 @@ export interface components {
             number: number;
             /** @description True while the pull request is a draft. Otherwise it is open. */
             draft: boolean;
+            /**
+             * @description The pull request's title, so a client can show it on hover. Text,
+             *     never markup. Left out when empty.
+             */
+            title?: string;
             /**
              * @description The address on this dashboard that opens the page listing the pull
              *     request, with its pop-up open: `/pull-requests.html`, `/releases.html`
