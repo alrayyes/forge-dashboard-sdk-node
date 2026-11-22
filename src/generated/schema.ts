@@ -419,6 +419,64 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/connections/github": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Start linking a GitHub account through the GitHub App
+         * @description Begins the GitHub App's user authorization flow with PKCE (S256) and
+         *     returns GitHub's consent page URL. The browser goes there; GitHub sends
+         *     it back to `GET /api/v1/connections/github/callback`. The token is a
+         *     user-to-server token: it expires and its refresh token rotates, and its
+         *     reach is whatever the App and the account's installations allow. Fails
+         *     with 409 when an account is already connected. Needs
+         *     `GITHUB_APP_CLIENT_ID` and `GITHUB_APP_CLIENT_SECRET` on the server; see
+         *     `SettingsResponse.githubOAuthConfigured`.
+         */
+        post: operations["startGitHubConnection"];
+        /**
+         * Unlink the GitHub account
+         * @description Deletes the stored token pair. Nothing else changes: a saved personal
+         *     access token, the GitHub App installation and the other settings stay.
+         *     Passkey sign-in is unaffected.
+         */
+        delete: operations["disconnectGitHub"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/connections/github/callback": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * GitHub's redirect back after consent
+         * @description Checks `state` (single use, ten minutes), exchanges `code` with the
+         *     PKCE verifier, reads the account's login, stores the token pair
+         *     encrypted, and redirects the browser to `/settings`. A missing, wrong,
+         *     used or expired `state` answers 400 and stores nothing. So does a
+         *     refused code, a bad PKCE verifier, or an error GitHub sent back in the
+         *     query. Nothing is stored when the account can't be read either (502).
+         */
+        get: operations["finishGitHubConnection"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/settings/filter-state": {
         parameters: {
             query?: never;
@@ -2395,6 +2453,17 @@ export interface components {
              */
             forgejoOAuthConnected: boolean;
             /**
+             * @description Whether this server has the GitHub App's OAuth client
+             *     (`GITHUB_APP_CLIENT_ID` and `GITHUB_APP_CLIENT_SECRET`), so
+             *     `POST /api/v1/connections/github` can work at all.
+             */
+            githubOAuthConfigured: boolean;
+            /**
+             * @description Whether a GitHub account is linked through the GitHub App's user
+             *     sign-in. The access and refresh tokens are never returned.
+             */
+            githubOAuthConnected: boolean;
+            /**
              * @description Identifies this user in a webhook URL
              *     (`/api/webhooks/{provider}/{webhookToken}`). Generated on
              *     first visit to Settings and stable after that.
@@ -2502,6 +2571,8 @@ export interface components {
             forgejoTokenSet: boolean;
             forgejoOAuthConfigured: boolean;
             forgejoOAuthConnected: boolean;
+            githubOAuthConfigured: boolean;
+            githubOAuthConnected: boolean;
             /**
              * @description Whether this user's webhook token and secret exist. They are
              *     created the first time the Settings page reads
@@ -6001,6 +6072,129 @@ export interface operations {
                 };
             };
             /** @description The token was granted but the instance wouldn't say whose account it is. Nothing is stored. */
+            502: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
+    startGitHubConnection: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Where to send the browser. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ConnectionAuthorizeResponse"];
+                };
+            };
+            /** @description GitHub OAuth isn't configured on this server. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description No valid session cookie was presented. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description A GitHub account is already connected. Disconnect first. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
+    disconnectGitHub: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Disconnected, or there was nothing to disconnect. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description No valid session cookie was presented. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
+    finishGitHubConnection: {
+        parameters: {
+            query?: {
+                code?: string;
+                state?: string;
+                error?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Linked. Redirects to `/settings`. */
+            303: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Unknown, used or expired state, or the code exchange failed. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description No valid session cookie was presented. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description The token was granted but GitHub wouldn't say whose account it is. Nothing is stored. */
             502: {
                 headers: {
                     [name: string]: unknown;
