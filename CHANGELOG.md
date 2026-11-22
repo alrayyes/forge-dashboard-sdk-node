@@ -1,5 +1,17 @@
 # Changelog
 
+## [28.20.0](https://github.com/alrayyes/forge-dashboard-sdk-node/compare/v28.19.0...v28.20.0) (2026-11-22)
+
+
+### Features
+
+* **spec:** regenerate types from forge-dashboard openapi.yaml ([#507](https://github.com/alrayyes/forge-dashboard-sdk-node/issues/507)) ([d068c10](https://github.com/alrayyes/forge-dashboard-sdk-node/commit/d068c10a74e4bc7d6a51ac25b554ecb6c31f694b))
+
+
+### Bug Fixes
+
+* bump @biomejs/biome ([#505](https://github.com/alrayyes/forge-dashboard-sdk-node/issues/505)) ([8d78ef2](https://github.com/alrayyes/forge-dashboard-sdk-node/commit/8d78ef2b40ac5d1505150106badb4065cb35b763))
+
 ## [28.19.0](https://github.com/alrayyes/forge-dashboard-sdk-node/compare/v28.18.0...v28.19.0) (2026-11-21)
 
 
