@@ -477,6 +477,32 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/connections/github/installed": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * GitHub's redirect back after the App is installed or changed
+         * @description The GitHub App's Setup URL. After an install, or a change of repository
+         *     access with "Redirect on update" on, GitHub sends the browser here with
+         *     `installation_id` and `setup_action`. The redirect is not trusted: the
+         *     ID is stored as an installation only when it is in the connected
+         *     user's own `GET /user/installations`, read with the linked account's
+         *     token. Otherwise nothing is stored (403). Without a linked account
+         *     nothing is stored either (409).
+         */
+        get: operations["finishGitHubInstallation"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/settings/filter-state": {
         parameters: {
             query?: never;
@@ -6195,6 +6221,72 @@ export interface operations {
                 };
             };
             /** @description The token was granted but GitHub wouldn't say whose account it is. Nothing is stored. */
+            502: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
+    finishGitHubInstallation: {
+        parameters: {
+            query: {
+                installation_id: number;
+                setup_action?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Stored. Redirects to `/settings`. */
+            303: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description No valid `installation_id`, or this server has no GitHub App OAuth client. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description No valid session cookie was presented. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description The ID is not one of the connected account's installations. Nothing is stored. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description No GitHub account is connected. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description GitHub would not list the account's installations. Nothing is stored. */
             502: {
                 headers: {
                     [name: string]: unknown;
