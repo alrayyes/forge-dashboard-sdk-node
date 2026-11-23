@@ -4009,6 +4009,23 @@ export interface components {
              */
             checksIncomplete: boolean;
             /**
+             * @description The checks the pull request waits on that no job in its pipeline
+             *     shows, by name: a pending commit status from an external CI, or a
+             *     check the base branch requires that nothing has reported yet. A
+             *     required check nothing has reported counts as `waiting` in
+             *     `checks`, and `ci` reads `pending` for it. A client that says why
+             *     Merge is locked can name them. A fact only; the client decides how
+             *     to say it. Absent when there are none, or when the forge can't say
+             *     (Forgejo needs admin on the repository to read its branch rules).
+             *     On Forgejo these are the statuses that point at no Actions job, and
+             *     the status-check patterns of the branch rule that no status
+             *     matches, only for a pull request whose statuses all passed. On
+             *     GitHub they are the required contexts the head commit hasn't
+             *     reported, when the rollup says success while the pull request is
+             *     blocked.
+             */
+            pendingChecks?: string[];
+            /**
              * @description How many review comments the pull request has, the ones on a
              *     line of code. Ordinary conversation comments are counted apart,
              *     in `conversationComments`. Always present, and 0 when
