@@ -4018,6 +4018,25 @@ export interface components {
              */
             conversationComments: number;
             /**
+             * Format: date-time
+             * @description When the newest comment on the pull request was written (RFC
+             *     3339), its creation time: an edit is not new activity. It covers
+             *     conversation comments and review comments alike. Absent when
+             *     there are no comments or the forge can't say. A client decides how
+             *     to word it; the dashboard shows it, as "last comment 2 hours ago",
+             *     in the comment pill's tip. On GitHub it comes from the pull
+             *     request query, the newest conversation comment and the newest
+             *     comment of each of the first 30 review threads, so it costs no
+             *     request. Forgejo's pull request payload carries only a count, and
+             *     a timestamp would take a request per pull request, so Forgejo
+             *     leaves the field out. GitHub's unauthenticated fallback has no
+             *     comment data and leaves it out too. GitHub returns the oldest 30
+             *     review threads, so on a pull request with more than 30 a newer
+             *     comment in a later thread is missed and the time can read older
+             *     than the truth.
+             */
+            lastCommentAt?: string;
+            /**
              * @description The issues the pull request will close when it merges. Always
              *     present, and empty when there are none. On GitHub it is the
              *     forge's own list of closing references, read in the pull request
