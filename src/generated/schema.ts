@@ -3760,6 +3760,8 @@ export interface components {
             rateLimitDocsUrl: string;
             /** @description The forms the forge's text uses to reference an issue. Open-ended; today `hash_or_gh_prefix` (a hash sign or a `GH-` prefix before the number) and `hash` (the hash sign only). */
             issueRefSyntax: string;
+            /** @description The path segment the forge's web address puts between a repository and a pull request's number, such as `pull` on GitHub and `pulls` on Forgejo. A client swaps it for an issue's `issues` segment to reach the pull request behind a reference. */
+            pullRequestPathSegment: string;
             /** @description The forge's name as a person reads it, such as `GitHub`. */
             label: string;
             /** @description The fixed public hosts an image embedded in the forge's text may come from, each matched by its exact name, over https on the default port. Empty means the forge's own saved instance. See `GET /api/v1/images`. */
