@@ -3344,6 +3344,14 @@ export interface components {
              *     failed" while it is true. Always present; false on Forgejo.
              */
             awaitingWorkflowApproval: boolean;
+            /**
+             * @description The same flag as on the pull request itself: true while the forge
+             *     has not yet listed every check of the head commit, so `checks`
+             *     counts some of them. A fact only; the client decides how to say it.
+             *     Always present, and false when the list is complete or the forge
+             *     can't tell.
+             */
+            checksIncomplete: boolean;
         };
         /** @description Who wrote a description or a comment. */
         Person: {
