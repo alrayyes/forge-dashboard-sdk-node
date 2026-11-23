@@ -4817,6 +4817,16 @@ export interface components {
             pullRequests: components["schemas"]["PullRequest"][];
             issues: components["schemas"]["Issue"][];
             repos: components["schemas"]["RepoStatus"][];
+            /**
+             * @description Why the automatic webhook pass creates no hook on any repo: the
+             *     dashboard's public origin (RP_ORIGIN) is not a full URL, is plain
+             *     HTTP, or points at localhost or a private address a forge can't
+             *     reach. One sentence, the same for every repo, so a client shows
+             *     it once and not on each row. Present only while at least one repo
+             *     has no hook and the credential could create one; absent when
+             *     the origin is fine or there is nothing to create.
+             */
+            webhookOriginProblem?: string;
         };
         /**
          * @description The result of the latest pipeline on a default branch's newest
@@ -5232,6 +5242,43 @@ export interface components {
              *     role it holds. Set today for Forgejo only.
              */
             webhookNeedsToken?: boolean;
+            /**
+             * @description Why this repo has no live webhook, when the dashboard knows.
+             *     Present only while hasWebhook is false, and absent when nothing
+             *     has been tried or learned yet. A client shows it on the repo's
+             *     row and decides the wording; new values are additive.
+             *
+             *     - `no_permission`: the credential can't administer the repo
+             *       (canManageWebhooks is false), so no hook is attempted.
+             *       webhookNeedsToken and webhookLockedByConnection say which
+             *       fix applies.
+             *     - `forge_unavailable`: the forge was rate limited, unreachable
+             *       or answered with a server error, so the automatic pass left
+             *       the repo for a later refresh. Nothing is broken; the
+             *       dashboard asks again by itself.
+             *     - `forge_refused`: the forge refused to create the hook.
+             *       webhookReasonDetail has its reason, and webhookNextAttemptAt
+             *       says when the dashboard asks again.
+             *
+             *     A public origin that makes no hook possible is not a per-repo
+             *     reason: see `webhookOriginProblem` on the dashboard.
+             */
+            webhookReason?: string;
+            /**
+             * @description What the forge itself said about the refusal, in one plain line.
+             *     Present only when `webhookReason` is `forge_refused` and the forge
+             *     gave a sentence; absent when it gave none, so a client never shows
+             *     a dashboard sentence as the forge's.
+             */
+            webhookReasonDetail?: string;
+            /**
+             * Format: date-time
+             * @description When the automatic pass next tries to create this repo's hook,
+             *     present with webhookReason `forge_refused`. A refresh that runs
+             *     after this time makes the attempt. It is not saved, so after a
+             *     restart the pass tries again at once.
+             */
+            webhookNextAttemptAt?: string;
             /**
              * Format: date-time
              * @description Present when the last fetch of this repository failed, and the
