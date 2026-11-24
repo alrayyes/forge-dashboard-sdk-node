@@ -3730,7 +3730,20 @@ export interface components {
             rerunChecksBlocked?: string;
             /** @description What the forge's own status page reports, set only for GitHub, only while it is unreachable (reachable is false, errorKind unreachable, upstream_error or unknown), and only when the page names an incident or a degraded component the dashboard uses (API Requests, Pull Requests, Actions or Webhooks). The page is read only after a failed call, at most once a minute, with a request that carries nothing about the user. Omitted when the page reports nothing there, when it can't be read, and for Forgejo, which has no such page. A client says "GitHub reports an incident" and leaves the cause of a failure with no incident to the forge's own error. */
             providerStatus?: components["schemas"]["ProviderStatus"];
+            /** @description The GitHub App installations that did not answer this refresh while the forge itself did (reachable is true). Each one's pull requests and issues keep the last rows read, and the other installations load as usual. Set only for GitHub, and only when more than one installation is read. Omitted when every installation answered. */
+            failedInstallations?: components["schemas"]["FailedInstallation"][];
             capabilities: components["schemas"]["ForgeCapabilities"];
+        };
+        /** @description One GitHub App installation that did not answer a refresh. */
+        FailedInstallation: {
+            /**
+             * Format: int64
+             * @description GitHub's ID for the installation.
+             */
+            installationId: number;
+            /** @description The account or org the App is installed on. Omitted when it was never recorded. */
+            account?: string;
+            errorKind: components["schemas"]["ForgeErrorKind"];
         };
         /** @description What one forge can do, as facts a client reads instead of testing the forge's name. A forge this service learns to talk to is one more set of values here, so a client that reads these needs no change for it. */
         ForgeCapabilities: {
