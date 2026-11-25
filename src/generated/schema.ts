@@ -2269,7 +2269,12 @@ export interface components {
              */
             error: string;
             /**
-             * @description Why the action was refused, from a re-read of the pull
+             * @description One of the values above today, and the server may learn more.
+             *     A client should treat a code it doesn't know like `unknown`
+             *     and show `message`, not fail to decode. Declared with
+             *     `x-extensible-enum` so adding a value is a minor SDK release.
+             *
+             *     Why the action was refused, from a re-read of the pull
              *     request's real state. `already_merged` and `already_closed`
              *     mean the dashboard's row was stale: the pull request has
              *     nothing left to merge.
@@ -2295,9 +2300,8 @@ export interface components {
              *     `auto_merge_not_allowed` (Enable auto-merge: the repo or pull
              *     request doesn't allow it) and `ready_to_merge` (Enable
              *     auto-merge: already clean, use Merge).
-             * @enum {string}
              */
-            code: "already_merged" | "already_closed" | "not_mergeable" | "conflict" | "behind" | "checks_pending" | "checks_failing" | "blocked_by_protection" | "already_up_to_date" | "auto_merge_not_allowed" | "ready_to_merge" | "permission" | "rate_limited" | "forge_error" | "forge_unreachable" | "status_unknown" | "not_rate_limited" | "not_open" | "not_reopenable" | "unknown";
+            code: string;
             /**
              * @description A short reason in plain words, safe to show a person, always.
              *     With `code: unknown` it is the forge's own sentence when that
