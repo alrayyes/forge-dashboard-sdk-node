@@ -2336,7 +2336,7 @@ export interface components {
              *     auto-merge: already clean, use Merge).
              * @enum {string}
              */
-            code: "already_merged" | "already_closed" | "not_mergeable" | "conflict" | "behind" | "checks_pending" | "checks_failing" | "blocked_by_protection" | "already_up_to_date" | "auto_merge_not_allowed" | "ready_to_merge" | "permission" | "rate_limited" | "forge_error" | "forge_unreachable" | "not_rate_limited" | "not_open" | "not_reopenable" | "unknown";
+            code: "already_merged" | "already_closed" | "not_mergeable" | "conflict" | "behind" | "checks_pending" | "checks_failing" | "blocked_by_protection" | "already_up_to_date" | "auto_merge_not_allowed" | "ready_to_merge" | "permission" | "rate_limited" | "forge_error" | "forge_unreachable" | "status_unknown" | "not_rate_limited" | "not_open" | "not_reopenable" | "unknown";
             /**
              * @description A short reason in plain words, safe to show a person, always.
              *     With `code: unknown` it is the forge's own sentence when that
@@ -7017,7 +7017,7 @@ export interface operations {
              *     refused and the re-read says why. `code` is one of
              *     `already_merged`, `already_closed`, `not_mergeable`, `conflict`,
              *     `behind`, `checks_pending`, `checks_failing`,
-             *     `blocked_by_protection` or `stacked`.
+             *     `blocked_by_protection`, `stacked` or `status_unknown`.
              */
             409: {
                 headers: {
