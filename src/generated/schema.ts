@@ -596,45 +596,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/webhooks/ensure": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Create or fix up a webhook on one tracked repo, on the signed-in user's behalf
-         * @description Creates a webhook on the named repo, pointed at the signed-in
-         *     user's own webhook URL and secret, subscribed to the events
-         *     docs/webhooks.md's manual steps recommend. If one already exists
-         *     there (found the same way GET /api/v1/dashboard's own `hasWebhook`
-         *     does — matching by URL path, not object identity) it's brought
-         *     back to active with the right events instead of creating a
-         *     duplicate.
-         *
-         *     One of a small number of endpoints in this API that write to a
-         *     forge rather than just reading from it — see also the
-         *     pull-requests tag.
-         *
-         *     A refusal from the forge (403, 404, 429 and 502) answers with the
-         *     same `ActionError` a refused pull request action does, so a client
-         *     reads one shape: `code` is `permission` or `rate_limited` where
-         *     the forge said so (with `resetsAt` for a rate limit), and
-         *     `unknown` otherwise, with a plain `message` either way. No new
-         *     code is needed: a repo the forge can't find is `unknown` with its
-         *     own message. 400 and 401 stay a plain `Error`, since they are
-         *     about the request, not a refusal by the forge.
-         */
-        post: operations["ensureWebhook"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/api/v1/repos/ignore": {
         parameters: {
             query?: never;
@@ -2790,7 +2751,7 @@ export interface components {
             /** @description The raw Bearer credential: `Authorization: Bearer <token>`. */
             token: string;
         };
-        /** @description Which repo to create or fix up a webhook on. */
+        /** @description Which repo a repo-level action targets. */
         WebhookEnsureRequest: {
             forge: components["schemas"]["Forge"];
             /** @description "owner/repo", matching a Repo.fullName from GET /api/v1/dashboard. */
@@ -5248,8 +5209,8 @@ export interface components {
              *     is its own admin permission flag. Always false for a repo
              *     reached through an unauthenticated, username-only listing.
              *     A point-in-time snapshot: a permission change since the last
-             *     refresh can still make a following ensure-webhook call fail
-             *     despite this having said true. For a GitHub App connection
+             *     refresh can still make a later hook write fail despite this having
+             *     said true. For a GitHub App connection
              *     there is no user role to read, so this is true when listing
              *     the repo's webhooks worked on the last refresh.
              */
@@ -6608,86 +6569,6 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Error"];
-                };
-            };
-        };
-    };
-    ensureWebhook: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["WebhookEnsureRequest"];
-            };
-        };
-        responses: {
-            /** @description The webhook now exists and is correctly configured. */
-            204: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /**
-             * @description The request body wasn't valid JSON, `fullName` wasn't
-             *     "owner/repo", no credentials are saved for that forge, or
-             *     that forge's client doesn't support managing webhooks at all.
-             */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["Error"];
-                };
-            };
-            /** @description No valid session cookie was presented. */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["Error"];
-                };
-            };
-            /** @description The forge rejected the request as unauthorized — the saved token's scope doesn't cover managing webhooks, or it isn't an admin on that repo. */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ActionError"];
-                };
-            };
-            /** @description The forge reported the repo itself doesn't exist (or isn't visible to this token). */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ActionError"];
-                };
-            };
-            /** @description The forge rate-limited the request. */
-            429: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ActionError"];
-                };
-            };
-            /** @description The forge was unreachable, or answered with something this app couldn't classify more specifically. */
-            502: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ActionError"];
                 };
             };
         };
