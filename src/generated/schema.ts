@@ -377,8 +377,11 @@ export interface paths {
          *     instance is already connected: the instance is locked until
          *     `DELETE /api/v1/connections/forgejo`, and `PUT /api/v1/settings`
          *     refuses to change `forgejoUrl` meanwhile. Replaces pasting a Forgejo
-         *     token. Needs `FORGEJO_OAUTH_CLIENT_ID` and
-         *     `FORGEJO_OAUTH_CLIENT_SECRET` on the server; see
+         *     token. The owner creates a public OAuth client on their own instance
+         *     and names its Client ID in `clientId`: no secret, PKCE only, scopes
+         *     asked for explicitly (`SetupForgejo.scopes`). A server that has
+         *     `FORGEJO_OAUTH_CLIENT_ID` and `FORGEJO_OAUTH_CLIENT_SECRET` set uses
+         *     that client when `clientId` is omitted; see
          *     `SettingsResponse.forgejoOAuthConfigured`.
          */
         post: operations["startForgejoConnection"];
@@ -405,10 +408,10 @@ export interface paths {
          * Forgejo's redirect back after consent
          * @description Checks `state` (single use, ten minutes), exchanges `code` with the
          *     PKCE verifier, stores the token pair encrypted, and redirects the
-         *     browser to `/settings`. A missing, wrong, used or expired `state`
-         *     answers 400 and stores nothing. So does a refused code, a bad PKCE
-         *     verifier, or an error the forge sent back in the query. Nothing is
-         *     stored when the account name can't be read either (502).
+         *     browser to `/setup`. Anything that goes wrong stores nothing and
+         *     redirects to `/setup?error=<code>` (`SetupErrorCode`): the person is
+         *     in a browser tab, and a JSON body would be a dead end. The forge's own
+         *     error text is never echoed.
          */
         get: operations["finishForgejoConnection"];
         put?: never;
@@ -463,10 +466,9 @@ export interface paths {
          * GitHub's redirect back after consent
          * @description Checks `state` (single use, ten minutes), exchanges `code` with the
          *     PKCE verifier, reads the account's login, stores the token pair
-         *     encrypted, and redirects the browser to `/settings`. A missing, wrong,
-         *     used or expired `state` answers 400 and stores nothing. So does a
-         *     refused code, a bad PKCE verifier, or an error GitHub sent back in the
-         *     query. Nothing is stored when the account can't be read either (502).
+         *     encrypted, and redirects the browser to `/setup`. Anything that goes
+         *     wrong stores nothing and redirects to `/setup?error=<code>`
+         *     (`SetupErrorCode`).
          */
         get: operations["finishGitHubConnection"];
         put?: never;
@@ -491,12 +493,67 @@ export interface paths {
          *     `installation_id` and `setup_action`. The redirect is not trusted: the
          *     ID is stored as an installation only when it is in the connected
          *     user's own `GET /user/installations`, read with the linked account's
-         *     token. Otherwise nothing is stored (403). Without a linked account
-         *     nothing is stored either (409).
+         *     token. Otherwise nothing is stored. Redirects to `/setup`, with
+         *     `?error=<code>` when nothing was stored. An owner who may not install
+         *     the App sends a request to the organisation's owners instead, and
+         *     GitHub then sends the browser here with `setup_action=request` and no
+         *     `installation_id`: that redirects to `/setup?install=requested`.
          */
         get: operations["finishGitHubInstallation"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/setup": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * What the first-login setup page needs to draw itself
+         * @description Facts only, never a verdict. The page decides which step is current,
+         *     which state a forge is in and whether Continue is enabled. Reads no
+         *     secret: a Forgejo Client ID is public, tokens are never returned.
+         *     `github.installations` is the signed-in GitHub account's own
+         *     installations of the App, read live with its token; when GitHub can't
+         *     be asked it is empty and `installationsUnavailable` is true.
+         *     Repository counts come from the last refresh of the board, and
+         *     `refreshed` says whether one has finished since this process started,
+         *     so zero before that means "not known yet", not "none".
+         */
+        get: operations["getSetup"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/setup/forgejo-instance": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Check that an address is a reachable Forgejo
+         * @description Asks `<instanceUrl>/api/v1/version`, which a Forgejo answers without a
+         *     sign-in, with a short timeout. The same address rules as
+         *     `POST /api/v1/connections/forgejo` apply. Stores nothing. Private and
+         *     loopback addresses are allowed on purpose: a Forgejo on a home or office
+         *     network is the normal case, so the address is not filtered.
+         */
+        post: operations["verifyForgejoInstance"];
         delete?: never;
         options?: never;
         head?: never;
@@ -2656,10 +2713,77 @@ export interface components {
              * @example https://git.example.com
              */
             instanceUrl: string;
+            /**
+             * @description The Client ID of a public OAuth client (Confidential client unticked,
+             *     PKCE, no secret) the owner created on their own Forgejo. Required
+             *     when the server has no Forgejo OAuth client configured. The id is
+             *     public, and is kept so refreshes can name it.
+             */
+            clientId?: string;
         };
         ConnectionAuthorizeResponse: {
             /** Format: uri */
             authorizeUrl: string;
+        };
+        VerifyForgejoInstanceRequest: {
+            /**
+             * Format: uri
+             * @example https://git.example.com
+             */
+            instanceUrl: string;
+        };
+        VerifyForgejoInstanceResponse: {
+            /** Format: uri */
+            instanceUrl: string;
+        };
+        /**
+         * @description Why a sign-in or an install came back without storing anything, as the
+         *     `error` query of the redirect to `/setup`. A client treats a value it
+         *     doesn't know as a generic failure.
+         */
+        SetupErrorCode: string;
+        SetupInstallation: {
+            /** Format: int64 */
+            id: number;
+            accountLogin: string;
+            /** @description Whether this installation is the one the board reads. */
+            saved: boolean;
+        };
+        SetupGitHub: {
+            /** @description Whether this server has the GitHub App's OAuth client. Without it nothing here can start. */
+            configured: boolean;
+            /** @description Where the App is installed (`github.com/apps/<slug>/installations/new`). Empty when the server doesn't know the App's slug (`GITHUB_APP_SLUG`). */
+            installUrl: string;
+            authorized: boolean;
+            /** @description The authorized account's login, or empty. */
+            account: string;
+            installations: components["schemas"]["SetupInstallation"][];
+            installationsUnavailable: boolean;
+            /** @description Repositories the board sees on GitHub as of its last refresh. */
+            repositoryCount: number;
+        };
+        SetupForgejo: {
+            /**
+             * Format: uri
+             * @description What the owner enters as the Redirect URI of the app they create on their Forgejo.
+             */
+            redirectUri: string;
+            /** @description The permissions the dashboard asks for, as Forgejo names them. */
+            scopes: string[];
+            /** @description The linked instance, or empty. */
+            instanceUrl: string;
+            linked: boolean;
+            account: string;
+            /** @description Repositories the board sees on Forgejo as of its last refresh. */
+            repositoryCount: number;
+            /** @description Whether the last refresh reached the instance. True while there has been none. */
+            reachable: boolean;
+        };
+        SetupResponse: {
+            github: components["schemas"]["SetupGitHub"];
+            forgejo: components["schemas"]["SetupForgejo"];
+            /** @description Whether the board has finished a refresh since the process started. */
+            refreshed: boolean;
         };
         /** @description See GET /api/v1/settings/theme's own description. */
         ThemeResponse: {
@@ -6081,7 +6205,7 @@ export interface operations {
                     "application/json": components["schemas"]["ConnectionAuthorizeResponse"];
                 };
             };
-            /** @description The instance URL isn't a valid http(s) URL, or OAuth isn't configured on this server. */
+            /** @description The instance URL isn't a valid http(s) URL, or there is neither a `clientId` nor a server-configured client. */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -6150,33 +6274,15 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description Linked. Redirects to `/settings`. */
+            /** @description Linked, or not. Redirects to `/setup`, with `?error=<code>` when nothing was stored. */
             303: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content?: never;
             };
-            /** @description Unknown, used or expired state, or the code exchange failed. */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["Error"];
-                };
-            };
             /** @description No valid session cookie was presented. */
             401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["Error"];
-                };
-            };
-            /** @description The token was granted but the instance wouldn't say whose account it is. Nothing is stored. */
-            502: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -6273,33 +6379,15 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description Linked. Redirects to `/settings`. */
+            /** @description Linked, or not. Redirects to `/setup`, with `?error=<code>` when nothing was stored. */
             303: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content?: never;
             };
-            /** @description Unknown, used or expired state, or the code exchange failed. */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["Error"];
-                };
-            };
             /** @description No valid session cookie was presented. */
             401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["Error"];
-                };
-            };
-            /** @description The token was granted but GitHub wouldn't say whose account it is. Nothing is stored. */
-            502: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -6311,8 +6399,8 @@ export interface operations {
     };
     finishGitHubInstallation: {
         parameters: {
-            query: {
-                installation_id: number;
+            query?: {
+                installation_id?: number;
                 setup_action?: string;
             };
             header?: never;
@@ -6321,20 +6409,40 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description Stored. Redirects to `/settings`. */
+            /** @description Stored, or not. Redirects to `/setup`, with `?error=<code>` when nothing was stored. */
             303: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content?: never;
             };
-            /** @description No valid `installation_id`, or this server has no GitHub App OAuth client. */
-            400: {
+            /** @description No valid session cookie was presented. */
+            401: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
                     "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
+    getSetup: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The setup facts. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SetupResponse"];
                 };
             };
             /** @description No valid session cookie was presented. */
@@ -6346,8 +6454,32 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description The ID is not one of the connected account's installations. Nothing is stored. */
-            403: {
+        };
+    };
+    verifyForgejoInstance: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["VerifyForgejoInstanceRequest"];
+            };
+        };
+        responses: {
+            /** @description It answered like a Forgejo. `instanceUrl` is the address without a trailing slash. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VerifyForgejoInstanceResponse"];
+                };
+            };
+            /** @description Not a usable http(s) address, or it did not answer like a Forgejo. `field` is `instanceUrl`. */
+            400: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -6355,17 +6487,8 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description No GitHub account is connected. */
-            409: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["Error"];
-                };
-            };
-            /** @description GitHub would not list the account's installations. Nothing is stored. */
-            502: {
+            /** @description No valid session cookie was presented. */
+            401: {
                 headers: {
                     [name: string]: unknown;
                 };
