@@ -2732,7 +2732,7 @@ export interface components {
              */
             instanceUrl: string;
         };
-        VerifyForgejoInstanceResponse: {
+        ForgejoInstanceCheck: {
             /** Format: uri */
             instanceUrl: string;
         };
@@ -6475,7 +6475,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["VerifyForgejoInstanceResponse"];
+                    "application/json": components["schemas"]["ForgejoInstanceCheck"];
                 };
             };
             /** @description Not a usable http(s) address, or it did not answer like a Forgejo. `field` is `instanceUrl`. */
