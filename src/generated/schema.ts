@@ -384,9 +384,12 @@ export interface paths {
         post: operations["startForgejoConnection"];
         /**
          * Unlink the Forgejo account
-         * @description Deletes the stored token pair. When a pasted Forgejo token is saved,
-         *     the instance URL and account name stay and the dashboard goes back to
-         *     that token; otherwise both are cleared. Passkey sign-in is unaffected.
+         * @description Deletes the stored token pair. Forgejo has no token revocation
+         *     endpoint, so the grant stays at the instance until it is removed under
+         *     Settings, Applications, Authorized OAuth2 Applications. When a pasted
+         *     Forgejo token is saved, the instance URL and account name stay and the
+         *     dashboard goes back to that token; otherwise both are cleared. Passkey
+         *     sign-in is unaffected.
          */
         delete: operations["disconnectForgejo"];
         options?: never;
@@ -442,9 +445,12 @@ export interface paths {
         post: operations["startGitHubConnection"];
         /**
          * Unlink the GitHub account
-         * @description Deletes the stored token pair. Nothing else changes: a saved personal
-         *     access token, the GitHub App installation and the other settings stay.
-         *     Passkey sign-in is unaffected.
+         * @description Asks GitHub to revoke the App's grant for the linked user (the access
+         *     and refresh token both stop working), then deletes the stored token
+         *     pair. If GitHub is unreachable or refuses, the pair is deleted anyway
+         *     and the answer is 200 with `revoked: false`; nothing is retried. Nothing
+         *     else changes: a saved personal access token, the GitHub App
+         *     installation and the other settings stay. Passkey sign-in is unaffected.
          */
         delete: operations["disconnectGitHub"];
         options?: never;
@@ -6331,7 +6337,24 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description Disconnected, or there was nothing to disconnect. */
+            /** @description Disconnected here, but GitHub did not confirm the revocation. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @enum {boolean} */
+                        revoked: false;
+                        /**
+                         * @description Optional hint text on where to revoke the grant by hand.
+                         *     A client may show it or use its own wording.
+                         */
+                        message?: string;
+                    };
+                };
+            };
+            /** @description Disconnected and the grant revoked, or there was nothing to disconnect. */
             204: {
                 headers: {
                     [name: string]: unknown;
