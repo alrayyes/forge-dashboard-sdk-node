@@ -4342,6 +4342,13 @@ export interface components {
              */
             failingCi: boolean;
             /**
+             * @description True when this is a green dependency pull request that is behind
+             *     its base branch with something left to merge, and isn't a draft or
+             *     hidden: what the "behind the base branch" chip lists, and what the
+             *     Bots menu pill's `behind` number counts. Always present.
+             */
+            greenBehindBase: boolean;
+            /**
              * @description True when a review is outstanding: the forge requires one, or a
              *     reviewer was asked and hasn't answered, and the pull request
              *     isn't a draft. Unreviewed with nobody asked, approved, changes
