@@ -2043,7 +2043,8 @@ export interface paths {
          *     request to another host, and a private repository's attachment loads
          *     without the forge token ever reaching the browser.
          *
-         *     Only the forge the item belongs to is reached. Forgejo: the saved
+         *     Only the forge the item belongs to is reached, apart from the avatar
+         *     hosts named below for `kind=avatar`. Forgejo: the saved
          *     instance, with the saved token sent to that host only. GitHub:
          *     `github.com` and its user-content hosts (`user-images`,
          *     `private-user-images`, `raw`, `gist`, `avatars` and `repository-images`
@@ -2061,6 +2062,12 @@ export interface paths {
          *     address answers 403 without a request. A redirect is followed only to
          *     another allowed host, and at most three times. GitHub's hosts are also
          *     refused at connect time if they resolve to a non-public address.
+         *
+         *     With `kind=avatar` on either forge, four more hosts are allowed:
+         *     `gravatar.com`, `secure.gravatar.com`, `seccdn.libravatar.org` and
+         *     `cdn.libravatar.org`. They are fetched over https only, by exact name,
+         *     with no token and only at a public address, and a redirect off that list
+         *     is refused. Without `kind=avatar` they answer 403 like any other host.
          *
          *     The body must be a PNG, JPEG, GIF or WebP by its own bytes, not by the
          *     host's `Content-Type`, and at most 8 MiB (512 KiB with `kind=avatar`).
@@ -2539,8 +2546,9 @@ export interface components {
             renovateAuthors: string[];
             /**
              * @description Other hosts a Forgejo avatar was refused for lately: the image
-             *     proxy only fetches from the saved instance, so an avatar on
-             *     Gravatar or Libravatar is skipped and the page shows an initial.
+             *     proxy fetches from the saved instance and from Gravatar and
+             *     Libravatar's own hosts, so an avatar on any other host is skipped
+             *     and the page shows an initial.
              *     Lowercase, sorted, at most eight, and never the instance's own
              *     host. A host is listed while its avatars keep being asked for and
              *     drops off after about ten minutes without one, so the list is
@@ -2630,8 +2638,9 @@ export interface components {
             ignoredTitleCounts: (number | null)[];
             /**
              * @description Other hosts a Forgejo avatar was refused for lately: the image
-             *     proxy only fetches from the saved instance, so an avatar on
-             *     Gravatar or Libravatar is skipped and the page shows an initial.
+             *     proxy fetches from the saved instance and from Gravatar and
+             *     Libravatar's own hosts, so an avatar on any other host is skipped
+             *     and the page shows an initial.
              *     Lowercase, sorted, at most eight, and never the instance's own
              *     host. A host is listed while its avatars keep being asked for and
              *     drops off after about ten minutes without one, so the list is
