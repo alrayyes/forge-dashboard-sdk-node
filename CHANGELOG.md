@@ -1,5 +1,16 @@
 # Changelog
 
+## [31.0.0](https://github.com/alrayyes/forge-dashboard-sdk-node/compare/v30.4.0...v31.0.0) (2026-11-26)
+
+
+### ⚠ BREAKING CHANGES
+
+* **spec:** forge-dashboard's spec removed or narrowed something a client may depend on:
+
+### Features
+
+* **spec:** regenerate types from forge-dashboard openapi.yaml ([#537](https://github.com/alrayyes/forge-dashboard-sdk-node/issues/537)) ([92f3069](https://github.com/alrayyes/forge-dashboard-sdk-node/commit/92f3069f91819ada6ca4e6bb70cb040688d8eea5))
+
 ## [30.4.0](https://github.com/alrayyes/forge-dashboard-sdk-node/compare/v30.3.0...v30.4.0) (2026-11-26)
 
 
