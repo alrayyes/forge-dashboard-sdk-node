@@ -3813,6 +3813,23 @@ export interface components {
             cause?: "starting" | "slow";
             /**
              * Format: date-time
+             * @description Present only while `cause` is "slow": about when the held rows
+             *     were read. It is normally the time of the last full read that
+             *     answered, including one that could not read some repositories,
+             *     whose rows are older. When webhook refreshes have made every
+             *     repository current after a failed full refresh or a restart, it is
+             *     the time of the last of those, and rows refreshed before it are
+             *     older. A webhook may also have refreshed single repositories since,
+             *     so some rows can be newer. `staleSince` is worked out the same way,
+             *     with the same limits. `rowsReadAt` stays the same through further
+             *     missed and skipped passes, and goes when `cause` does. `rowsReadAt`
+             *     is not `staleSince`: the forge is still reachable, and nothing is
+             *     locked. A client can say "slow to answer, showing data from 3
+             *     minutes ago".
+             */
+            rowsReadAt?: string;
+            /**
+             * Format: date-time
              * @description Present when the last refresh against this forge failed, or the
              *     forge has not been asked yet since the app started (see
              *     starting), and the pull requests, issues and repos in the
