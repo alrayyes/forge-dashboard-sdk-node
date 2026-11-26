@@ -2515,6 +2515,11 @@ export interface components {
              */
             githubOAuthConnected: boolean;
             /**
+             * @description The login of the linked GitHub account, or an empty string when none
+             *     is linked or GitHub can't be asked right now. Never a token.
+             */
+            githubLogin: string;
+            /**
              * @description The label Renovate's own rebase/retry trigger listens for on
              *     a repo (Renovate's own `rebaseLabel` config option — genuinely
              *     per-repo configurable, so this is a user-set override rather
@@ -2610,6 +2615,7 @@ export interface components {
             forgejoOAuthConnected: boolean;
             githubOAuthConfigured: boolean;
             githubOAuthConnected: boolean;
+            githubLogin: string;
             /**
              * @description Whether this user's webhook token and secret exist. They are
              *     created the first time the Settings page reads
