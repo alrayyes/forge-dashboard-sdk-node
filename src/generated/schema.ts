@@ -3779,6 +3779,21 @@ export interface components {
              */
             starting?: boolean;
             /**
+             * @description Why the rows shown for this forge are not from the latest read,
+             *     while the forge is not down. "starting" is the same fact as
+             *     the `starting` flag: the rows are the ones the last run saved and no
+             *     refresh has asked the forge since the app started. "slow" means
+             *     the latest pass gave no answer in time (it hit its deadline, or
+             *     was skipped because the last fetch was still running) and the
+             *     last good rows are held, with the forge still reachable, until
+             *     three passes in a row have missed. A good read clears it. Absent
+             *     when the rows are current, and when the forge is shown as down
+             *     (see errorKind). A client words it, "slow to answer" or
+             *     "starting up", and does not call the rows live.
+             * @enum {string}
+             */
+            cause?: "starting" | "slow";
+            /**
              * Format: date-time
              * @description Present when the last refresh against this forge failed, or the
              *     forge has not been asked yet since the app started (see
