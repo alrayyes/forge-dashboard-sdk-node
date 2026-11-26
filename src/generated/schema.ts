@@ -4357,6 +4357,14 @@ export interface components {
              */
             failingCi: boolean;
             /**
+             * @description True when this pull request is behind its base branch with
+             *     something left to merge, at any CI state, drafts and hidden ones
+             *     included: what the row's Out of date badge shows and what the Out of
+             *     date quick filter lists. An empty pull request has nothing to
+             *     update, so it is false. Always present.
+             */
+            outOfDate: boolean;
+            /**
              * @description True when this is a green dependency pull request that is behind
              *     its base branch with something left to merge, and isn't a draft or
              *     hidden: what the "behind the base branch" chip lists, and what the
