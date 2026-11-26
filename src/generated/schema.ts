@@ -246,11 +246,9 @@ export interface paths {
         };
         /**
          * The signed-in user's own forge configuration
-         * @description Forge tokens are never returned, only whether one is set. The
-         *     webhook token and secret are returned, since the user pastes them
-         *     into the forge's webhook setup, and a first read creates them. For
-         *     a read that creates nothing and omits both, see
-         *     `GET /api/v1/settings/summary`.
+         * @description Forge tokens are never returned, only whether one is set. Nor are the
+         *     webhook token and secret, though a first read still creates them. For
+         *     a read that creates nothing, see `GET /api/v1/settings/summary`.
          */
         get: operations["getSettings"];
         /**
@@ -278,11 +276,10 @@ export interface paths {
         };
         /**
          * The signed-in user's settings, read without side effects
-         * @description The same data as `GET /api/v1/settings`, minus the webhook token and
-         *     secret, plus `webhookConfigured`. It never provisions webhook
-         *     credentials: for a user who has none yet it answers
-         *     `webhookConfigured: false` and creates nothing. Forge tokens are
-         *     never returned, only whether one is set. It returns exactly what
+         * @description The same data as `GET /api/v1/settings`, plus `webhookConfigured`. It
+         *     never provisions webhook credentials: for a user who has none yet it
+         *     answers `webhookConfigured: false` and creates nothing. Forge tokens
+         *     are never returned, only whether one is set. It returns exactly what
          *     the `get_settings` MCP tool returns.
          */
         get: operations["getSettingsSummary"];
@@ -2450,9 +2447,9 @@ export interface components {
          * @description The signed-in user's own GitHub/Forgejo configuration. Never
          *     includes a forge token's value — only whether one is currently
          *     saved, so the UI can show a "Configured" badge without the secret
-         *     ever reaching the browser. webhookToken/webhookSecret are the
-         *     exception: they're ours to hand back in the clear, since the user
-         *     has to paste them into the forge's own webhook setup.
+         *     ever reaching the browser. The webhook token and secret stay on the
+         *     server too: the receivers read them from the store, and the browser
+         *     never needs them.
          */
         SettingsResponse: {
             /** @description Used as a token-free public-repos fallback when no GitHub token is set. */
@@ -2511,19 +2508,6 @@ export interface components {
              *     sign-in. The access and refresh tokens are never returned.
              */
             githubOAuthConnected: boolean;
-            /**
-             * @description Identifies this user in a webhook URL
-             *     (`/api/webhooks/{provider}/{webhookToken}`). Generated on
-             *     first visit to Settings and stable after that.
-             */
-            webhookToken: string;
-            /**
-             * @description Pasted into the forge's own webhook "Secret" field, used to
-             *     verify the signature header on incoming webhook deliveries
-             *     (`X-Hub-Signature-256` on GitHub, `X-Forgejo-Signature` on
-             *     Forgejo). Never appears in the webhook URL itself.
-             */
-            webhookSecret: string;
             /**
              * @description The label Renovate's own rebase/retry trigger listens for on
              *     a repo (Renovate's own `rebaseLabel` config option — genuinely
@@ -2603,8 +2587,7 @@ export interface components {
         /**
          * @description The signed-in user's settings as `GET /api/v1/settings/summary` and the
          *     `get_settings` MCP tool return them: every field of
-         *     SettingsResponse except `webhookToken` and `webhookSecret`, which are
-         *     never part of it, plus `webhookConfigured`. No forge token appears,
+         *     SettingsResponse, plus `webhookConfigured`. No forge token appears,
          *     only whether one is set. Field meanings are those of the same-named
          *     SettingsResponse properties.
          */
