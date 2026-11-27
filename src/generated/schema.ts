@@ -4546,8 +4546,8 @@ export interface components {
              *     `message` say why ("Already merged"). `failed`: either the action
              *     ran and the forge refused, with the structured `code` and
              *     `message` an immediate action would have answered, or it never
-             *     ran because the forge still didn't answer an hour after the
-             *     action first came due, with `code` `unknown`.
+             *     ran because the forge still didn't answer, or was still slow,
+             *     an hour after the action first came due, with `code` `unknown`.
              * @enum {string}
              */
             status: "queued" | "done" | "skipped" | "failed";
