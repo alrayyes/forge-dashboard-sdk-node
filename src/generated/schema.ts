@@ -2333,6 +2333,14 @@ export interface components {
              */
             field?: string;
         };
+        /** @description A read the forge rate-limited. */
+        RateLimitedError: components["schemas"]["Error"] & {
+            /**
+             * Format: date-time
+             * @description When the exhausted budget comes back. Absent when the forge didn't say, and when it limited the request with budget still left (GitHub's secondary limit), since no reset time is known then. On Forgejo it comes from the `Retry-After` header.
+             */
+            resetsAt?: string;
+        };
         /** @description The structured result of a refused pull request action (Merge, Close, Update branch, Enable auto-merge, Dependabot and Renovate rebase). `code` and `message` are what a client should act on and show. */
         ActionError: {
             /**
@@ -8365,7 +8373,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Error"];
+                    "application/json": components["schemas"]["RateLimitedError"];
                 };
             };
             /** @description The forge was unreachable, or answered with something this app couldn't classify more specifically. */
@@ -8445,7 +8453,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Error"];
+                    "application/json": components["schemas"]["RateLimitedError"];
                 };
             };
             /** @description The forge was unreachable, or answered with something this app couldn't classify more specifically. */
@@ -8753,7 +8761,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Error"];
+                    "application/json": components["schemas"]["RateLimitedError"];
                 };
             };
             /** @description The forge was unreachable, or answered with something this app couldn't classify more specifically. */
