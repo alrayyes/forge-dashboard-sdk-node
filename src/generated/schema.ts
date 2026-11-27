@@ -1372,11 +1372,15 @@ export interface paths {
          *     /api/v1/dashboard's snapshot: comments and reactions for every row would
          *     spend the forge's budget on rows nobody opens.
          *
+         *     Review comments on lines of code are not listed, only counted
+         *     (`reviewCommentCount`).
+         *
          *     GitHub answers with one GraphQL query. Forgejo costs one call for the
          *     pull request, one for its comments, one for the description's
-         *     reactions and one for each comment's reactions (up to 50), so the
-         *     reaction calls run at most eight at a time and stop at the first rate
-         *     limit.
+         *     reactions, one for each comment's reactions (up to 50) and one for
+         *     each page of the pull request's reviews, whose line comment counts
+         *     are added up. The reaction calls run at most eight at a time and stop
+         *     at the first rate limit.
          *
          *     Every text is Markdown exactly as the forge stores it (`format` is
          *     always `markdown`). The server neither converts nor sanitises it, so
@@ -3510,6 +3514,24 @@ export interface components {
             commentCount: number;
             /** @description True when `commentCount` is more than the comments returned. */
             commentsTruncated: boolean;
+            /**
+             * @description How many review comments the pull request has, the ones on a line
+             *     of code, replies included. Only the number: the comments
+             *     themselves are not in `comments`, and `commentCount` leaves them
+             *     out too. A client says how many there are and links to the forge.
+             *     It counts what the row's `reviewComments` counts, but the two can
+             *     differ. On GitHub the row reads the first 30 review threads and
+             *     this reads the first 100, so the row can report fewer with nothing
+             *     new written. A Forgejo draft's row reports 0. This is also read
+             *     live, so it can be newer than the row.
+             */
+            reviewCommentCount: number;
+            /**
+             * @description True when the forge has more review threads than were counted, so
+             *     `reviewCommentCount` is a lower bound. GitHub only, past the first
+             *     100 threads; always false on Forgejo, where every review is read.
+             */
+            reviewCommentsTruncated: boolean;
             /**
              * @description For a release pull request, the release notes it will publish (a
              *     release-please pull request's description is its changelog). Null
